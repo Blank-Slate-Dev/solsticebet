@@ -8,7 +8,11 @@
 // If a test of the in-memory impl passes, the same test against the
 // Postgres impl must also pass — that's how we know the two are equivalent.
 
-import { randomUUID } from 'node:crypto';
+// Generates a UUID v4. Uses the Web Crypto API (`globalThis.crypto.randomUUID`),
+// which is available natively in Node 19+ and all modern browsers.
+function generateUUID(): string {
+  return globalThis.crypto.randomUUID();
+}
 
 import type { Account, LedgerEntry, ProposedTransaction, Transaction } from './types.js';
 import {
@@ -139,7 +143,7 @@ export class InMemoryLedgerRepository implements LedgerRepository {
     }
 
     // All checks passed. Atomically write entries and the transaction record.
-    const transactionId = randomUUID();
+    const transactionId = generateUUID();
     const now = new Date();
     const writtenEntries: StoredEntry[] = [];
 

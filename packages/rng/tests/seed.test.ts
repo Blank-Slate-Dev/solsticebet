@@ -1,6 +1,8 @@
 // packages/rng/tests/seed.test.ts
 
-import { createHash } from 'node:crypto';
+import { sha256 } from '@noble/hashes/sha2.js';
+
+import { bytesToHex, hexToBytes } from '../src/hex.js';
 
 import { describe, expect, it } from 'vitest';
 
@@ -44,8 +46,8 @@ describe('generateDefaultClientSeed', () => {
 describe('hashServerSeed', () => {
   it('matches a manually-computed SHA-256 of the seed bytes', () => {
     const seed = '0123456789abcdef'.repeat(4);
-    const seedBytes = Buffer.from(seed, 'hex');
-    const expected = createHash('sha256').update(seedBytes).digest('hex');
+    const seedBytes = hexToBytes(seed);
+    const expected = bytesToHex(sha256(seedBytes));
     expect(hashServerSeed(seed)).toBe(expected);
   });
 

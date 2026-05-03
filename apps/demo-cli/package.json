@@ -1,0 +1,28 @@
+{
+  "name": "@solsticebet/demo-cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive PowerShell/terminal demo for Solstice. Not for production.",
+  "scripts": {
+    "start": "node --import tsx src/main.ts",
+    "build": "echo 'demo-cli has no build step (run with tsx)' && exit 0",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@solsticebet/game-dice": "workspace:*",
+    "@solsticebet/game-mines": "workspace:*",
+    "@solsticebet/game-plinko": "workspace:*",
+    "@solsticebet/ledger": "workspace:*",
+    "@solsticebet/rng": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

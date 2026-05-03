@@ -61,6 +61,7 @@ export { InMemoryLedgerRepository } from './in-memory.js';
 export {
   recordAdjustment,
   recordBetLoss,
+  recordBetPartialPayout,
   recordBetRefund,
   recordBetStake,
   recordBetWin,
@@ -71,6 +72,7 @@ export {
 export type {
   RecordAdjustmentInput,
   RecordBetLossInput,
+  RecordBetPartialPayoutInput,
   RecordBetRefundInput,
   RecordBetStakeInput,
   RecordBetWinInput,

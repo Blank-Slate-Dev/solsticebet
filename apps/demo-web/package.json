@@ -1,0 +1,41 @@
+{
+  "name": "@solsticebet/demo-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Demo webpage for Solstice. Not the production web app — see apps/web for that (TBD).",
+  "scripts": {
+    "dev": "next dev",
+    "start": "next start",
+    "build": "next build",
+    "lint": "next lint",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "clean": "rm -rf .next .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@solsticebet/game-dice": "workspace:*",
+    "@solsticebet/game-mines": "workspace:*",
+    "@solsticebet/game-plinko": "workspace:*",
+    "@solsticebet/game-baccarat": "workspace:*",
+    "@solsticebet/game-blackjack": "workspace:*",
+    "@solsticebet/game-roulette": "workspace:*",
+    "@solsticebet/ledger": "workspace:*",
+    "@solsticebet/rng": "workspace:*",
+    "next": "^15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^15.1.4",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

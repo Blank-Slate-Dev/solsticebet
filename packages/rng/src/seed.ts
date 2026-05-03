@@ -2,9 +2,13 @@
 //
 // Server seed lifecycle utilities: generation, hashing, validation.
 // See docs/RNG.md § 4 for the full lifecycle.
+//
+// Isomorphic: works in Node 22+ and modern browsers via the Web Crypto API
+// (`globalThis.crypto`) and @noble/hashes.
 
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { sha256 } from '@noble/hashes/sha2.js';
 
+import { bytesToHex, hexToBytes, timingSafeEqualBytes } from './hex.js';
 import { assertValidServerSeed } from './validate.js';
 
 /**
@@ -18,15 +22,24 @@ const SERVER_SEED_BYTES = 32;
 const DEFAULT_CLIENT_SEED_BYTES = 8;
 
 /**
+ * Generates `n` cryptographically-random bytes via the Web Crypto API.
+ * `globalThis.crypto.getRandomValues` is available in Node 19+ and all modern browsers.
+ */
+function randomBytes(n: number): Uint8Array {
+  const out = new Uint8Array(n);
+  globalThis.crypto.getRandomValues(out);
+  return out;
+}
+
+/**
  * Generates a fresh server seed using the OS CSPRNG.
  *
  * Returns a 64-character lowercase hex string representing 32 random bytes.
- * Never use Math.random for this. Cert lab will fail you.
  *
  * @returns 64-char lowercase hex string
  */
 export function generateServerSeed(): string {
-  return randomBytes(SERVER_SEED_BYTES).toString('hex');
+  return bytesToHex(randomBytes(SERVER_SEED_BYTES));
 }
 
 /**
@@ -36,7 +49,7 @@ export function generateServerSeed(): string {
  * @returns 16-char lowercase hex string
  */
 export function generateDefaultClientSeed(): string {
-  return randomBytes(DEFAULT_CLIENT_SEED_BYTES).toString('hex');
+  return bytesToHex(randomBytes(DEFAULT_CLIENT_SEED_BYTES));
 }
 
 /**
@@ -48,8 +61,8 @@ export function generateDefaultClientSeed(): string {
  */
 export function hashServerSeed(serverSeed: string): string {
   assertValidServerSeed(serverSeed);
-  const seedBytes = Buffer.from(serverSeed, 'hex');
-  return createHash('sha256').update(seedBytes).digest('hex');
+  const seedBytes = hexToBytes(serverSeed);
+  return bytesToHex(sha256(seedBytes));
 }
 
 /**
@@ -67,16 +80,13 @@ export function verifyServerSeed(serverSeed: string, expectedHash: string): bool
     return false;
   }
 
-  const computed = Buffer.from(hashServerSeed(serverSeed), 'hex');
-  // Buffer.from(s, 'hex') doesn't throw on malformed input — it silently
-  // truncates at the first invalid character. We rely on the regex check
-  // above to ensure expectedHash is exactly 64 hex chars; the length
-  // comparison below is the final guard.
-  const expected = Buffer.from(expectedHash, 'hex');
-
-  if (computed.length !== expected.length) {
+  const computed = hexToBytes(hashServerSeed(serverSeed));
+  let expected: Uint8Array;
+  try {
+    expected = hexToBytes(expectedHash);
+  } catch {
     return false;
   }
 
-  return timingSafeEqual(computed, expected);
+  return timingSafeEqualBytes(computed, expected);
 }

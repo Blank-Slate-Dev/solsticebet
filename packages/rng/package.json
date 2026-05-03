@@ -21,6 +21,9 @@
     "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist .turbo coverage *.tsbuildinfo"
   },
+  "dependencies": {
+    "@noble/hashes": "^1.7.0"
+  },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@vitest/coverage-v8": "^2.1.8",

@@ -2,7 +2,16 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { deriveDice, deriveMines, derivePlinko, MINES_TILE_COUNT } from '../src/games.js';
+import {
+  deriveBaccarat,
+  deriveBlackjack,
+  deriveDice,
+  deriveMines,
+  derivePlinko,
+  deriveRoulette,
+  MINES_TILE_COUNT,
+  ROULETTE_POCKETS,
+} from '../src/games.js';
 import { generateServerSeed } from '../src/seed.js';
 
 describe('deriveDice', () => {
@@ -156,5 +165,118 @@ describe('derivePlinko', () => {
       }
     }
     expect([3, 4, 5]).toContain(argmax);
+  });
+});
+
+describe('deriveRoulette', () => {
+  it('returns a result in [0, 36] inclusive', () => {
+    for (let n = 0; n < 1000; n++) {
+      const { result } = deriveRoulette('0'.repeat(64), 'roulette-test', n);
+      expect(Number.isInteger(result)).toBe(true);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThan(ROULETTE_POCKETS);
+    }
+  });
+
+  it('is deterministic', () => {
+    const a = deriveRoulette('0'.repeat(64), 'r-test', 42);
+    const b = deriveRoulette('0'.repeat(64), 'r-test', 42);
+    expect(a).toEqual(b);
+  });
+
+  it('different nonces produce different outcomes (high probability)', () => {
+    const seen = new Set<number>();
+    for (let n = 0; n < 200; n++) {
+      seen.add(deriveRoulette('0'.repeat(64), 'spread', n).result);
+    }
+    // 200 samples across 37 buckets — should hit at least 30 distinct values.
+    expect(seen.size).toBeGreaterThan(30);
+  });
+
+  it('every pocket appears at roughly 1/37 frequency in a large sample', () => {
+    const counts = new Array<number>(ROULETTE_POCKETS).fill(0);
+    const N = 5000;
+    for (let n = 0; n < N; n++) {
+      const { result } = deriveRoulette('0'.repeat(64), 'distribution', n);
+      counts[result] = (counts[result] ?? 0) + 1;
+    }
+    const expected = N / ROULETTE_POCKETS;
+    // Each pocket should land within ±40% of expected at this sample size.
+    for (const c of counts) {
+      expect(c).toBeGreaterThan(expected * 0.6);
+      expect(c).toBeLessThan(expected * 1.4);
+    }
+  });
+});
+
+describe('deriveBaccarat', () => {
+  it('returns 6 cards, each a rank in [0, 13)', () => {
+    const { cards } = deriveBaccarat('0'.repeat(64), 'baccarat-test', 0);
+    expect(cards).toHaveLength(6);
+    for (const c of cards) {
+      expect(Number.isInteger(c)).toBe(true);
+      expect(c).toBeGreaterThanOrEqual(0);
+      expect(c).toBeLessThan(13);
+    }
+  });
+
+  it('is deterministic', () => {
+    const a = deriveBaccarat('0'.repeat(64), 'b-test', 42);
+    const b = deriveBaccarat('0'.repeat(64), 'b-test', 42);
+    expect(a).toEqual(b);
+  });
+
+  it('different nonces produce different deals', () => {
+    const seen = new Set<string>();
+    for (let n = 0; n < 100; n++) {
+      const { cards } = deriveBaccarat('0'.repeat(64), 'b-spread', n);
+      seen.add(cards.join(','));
+    }
+    // 100 samples from 13^6 = ~4.8M possible deals; collisions should be near zero.
+    expect(seen.size).toBe(100);
+  });
+
+  it('rank distribution is roughly uniform over a large sample', () => {
+    const counts = new Array<number>(13).fill(0);
+    const N = 1000;
+    for (let n = 0; n < N; n++) {
+      const { cards } = deriveBaccarat('0'.repeat(64), 'b-dist', n);
+      for (const c of cards) {
+        counts[c] = (counts[c] ?? 0) + 1;
+      }
+    }
+    // 6000 cards across 13 ranks; each rank expected ~462. Allow ±35%.
+    const expected = (N * 6) / 13;
+    for (const c of counts) {
+      expect(c).toBeGreaterThan(expected * 0.65);
+      expect(c).toBeLessThan(expected * 1.35);
+    }
+  });
+});
+
+describe('deriveBlackjack', () => {
+  it('returns 32 cards, each a rank in [0, 13)', () => {
+    const { cards } = deriveBlackjack('0'.repeat(64), 'bj-test', 0);
+    expect(cards).toHaveLength(32);
+    for (const c of cards) {
+      expect(Number.isInteger(c)).toBe(true);
+      expect(c).toBeGreaterThanOrEqual(0);
+      expect(c).toBeLessThan(13);
+    }
+  });
+
+  it('is deterministic', () => {
+    const a = deriveBlackjack('0'.repeat(64), 'bj-test', 99);
+    const b = deriveBlackjack('0'.repeat(64), 'bj-test', 99);
+    expect(a).toEqual(b);
+  });
+
+  it('different nonces produce different deals', () => {
+    const seen = new Set<string>();
+    for (let n = 0; n < 50; n++) {
+      const { cards } = deriveBlackjack('0'.repeat(64), 'bj-spread', n);
+      seen.add(cards.join(','));
+    }
+    expect(seen.size).toBe(50);
   });
 });

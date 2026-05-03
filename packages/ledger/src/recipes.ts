@@ -124,6 +124,78 @@ export async function recordBetWin(
   return repo.recordTransaction(tx);
 }
 
+export interface RecordBetPartialPayoutInput {
+  readonly userAccountId: string;
+  readonly escrowAccountId: string;
+  readonly houseAccountId: string;
+  /** Original stake (already in escrow). */
+  readonly stake: bigint;
+  /** Amount to refund to user; must be in (0, stake). */
+  readonly payout: bigint;
+  readonly currency: Currency;
+  readonly betId: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Phase 2 of a bet that pays back less than the stake (a "partial payout").
+ *
+ * Used by games where the outcome can be a bucket whose multiplier is less
+ * than 1 (e.g., Plinko's middle buckets). The escrow drains: the partial
+ * payout flows to the user, the remainder flows to the house.
+ *
+ * Constraints:
+ *   - 0 < payout < stake. For payout == 0, use `recordBetLoss`. For
+ *     payout == stake, use `recordBetRefund`. For payout > stake, use
+ *     `recordBetWin`. This recipe rejects edge cases to make the caller
+ *     pick the right semantic.
+ *
+ * Idempotency key: `bet_settle:<betId>`.
+ */
+export async function recordBetPartialPayout(
+  repo: LedgerRepository,
+  input: RecordBetPartialPayoutInput,
+): Promise<Transaction> {
+  assertPositive(input.stake);
+  assertPositive(input.payout);
+  if (input.payout >= input.stake) {
+    throw new RangeError(
+      'recordBetPartialPayout requires 0 < payout < stake; use recordBetWin or recordBetRefund',
+    );
+  }
+  const houseGain = input.stake - input.payout;
+  const tx: ProposedTransaction = {
+    idempotencyKey: `bet_settle:${input.betId}`,
+    entries: [
+      {
+        accountId: input.escrowAccountId,
+        amount: -input.stake,
+        currency: input.currency,
+        transactionType: 'bet_payout',
+        referenceId: input.betId,
+        metadata: input.metadata ?? {},
+      },
+      {
+        accountId: input.userAccountId,
+        amount: input.payout,
+        currency: input.currency,
+        transactionType: 'bet_payout',
+        referenceId: input.betId,
+        metadata: input.metadata ?? {},
+      },
+      {
+        accountId: input.houseAccountId,
+        amount: houseGain,
+        currency: input.currency,
+        transactionType: 'bet_payout',
+        referenceId: input.betId,
+        metadata: input.metadata ?? {},
+      },
+    ],
+  };
+  return repo.recordTransaction(tx);
+}
+
 export interface RecordBetLossInput {
   readonly escrowAccountId: string;
   readonly houseAccountId: string;

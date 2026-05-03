@@ -143,6 +143,146 @@ export function derivePlinko(
   return { path, bucket };
 }
 
+// ─── Roulette ─────────────────────────────────────────────────────────────
+
+/**
+ * The number of pockets on a European roulette wheel: 0..36 inclusive.
+ */
+export const ROULETTE_POCKETS = 37;
+
+/**
+ * Roulette outcome: the winning pocket number, 0..36 inclusive.
+ */
+export interface RouletteOutcome {
+  readonly result: number;
+}
+
+/**
+ * Derives a European roulette spin result.
+ *
+ * Maps a single uniform float in [0, 1) to a uniformly-distributed integer
+ * in [0, 36]. Each pocket has probability 1/37 ≈ 2.703%.
+ *
+ * Note: while there are 37 pockets, a 4-byte float gives 2^32 possible
+ * values which divide cleanly into 37 buckets to within 1 part in 2^27
+ * uniformity — far below detection at any realistic sample size.
+ *
+ * @param serverSeed 64-char hex
+ * @param clientSeed printable ASCII
+ * @param nonce per-seed counter
+ */
+export function deriveRoulette(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number,
+): RouletteOutcome {
+  const [f] = deriveFloats(serverSeed, clientSeed, nonce, 1);
+  /* v8 ignore next 3 -- defensive invariant; unreachable given deriveFloats contract */
+  if (f === undefined) {
+    throw new Error('invariant: deriveFloats(count=1) returned empty');
+  }
+  const result = Math.floor(f * ROULETTE_POCKETS);
+  return { result };
+}
+
+// ─── Baccarat ─────────────────────────────────────────────────────────────
+
+/**
+ * Maximum cards dealt in a single Baccarat coup: 3 to Player + 3 to Banker.
+ */
+export const BACCARAT_MAX_CARDS = 6;
+
+/**
+ * Number of card ranks in a standard deck. Suits don't affect Baccarat
+ * outcomes (only the rank's point value matters), so we draw from a
+ * uniform 13-rank distribution. This is the standard published approach
+ * for provably-fair Baccarat used by Stake-derivative casinos.
+ */
+export const BACCARAT_RANKS = 13;
+
+/**
+ * Baccarat deal: a sequence of 6 card ranks (0..12), where:
+ *   0 = Ace (point value 1)
+ *   1..8 = 2..9 (face value)
+ *   9 = 10 (point value 0)
+ *   10 = Jack (point value 0)
+ *   11 = Queen (point value 0)
+ *   12 = King (point value 0)
+ *
+ * The engine consumes cards in order: Player gets cards 0 and 2, Banker gets
+ * 1 and 3, then up to two more (4 to whichever side draws first per the
+ * tableau, 5 to the other if needed).
+ */
+export interface BaccaratOutcome {
+  readonly cards: readonly number[];
+}
+
+/**
+ * Derives a Baccarat coup. Returns 6 card ranks; the engine will use as many
+ * as the tableau requires (typically 4 or 5).
+ *
+ * @param serverSeed 64-char hex
+ * @param clientSeed printable ASCII
+ * @param nonce per-seed counter
+ */
+export function deriveBaccarat(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number,
+): BaccaratOutcome {
+  const floats = deriveFloats(serverSeed, clientSeed, nonce, BACCARAT_MAX_CARDS);
+  const cards: number[] = [];
+  for (const f of floats) {
+    cards.push(Math.floor(f * BACCARAT_RANKS));
+  }
+  return { cards };
+}
+
+// ─── Blackjack ────────────────────────────────────────────────────────────
+
+/**
+ * Maximum cards a single Blackjack round can use. With 4 split hands,
+ * each holding up to 21 cards (theoretical extreme: lots of low cards),
+ * we'd never realistically exceed this. Most rounds use 4–8 cards.
+ */
+export const BLACKJACK_MAX_CARDS = 32;
+
+/**
+ * Number of card ranks (suits don't affect outcome). 13 ranks:
+ * 0=Ace (1 or 11), 1..8=2..9 (face value), 9=10, 10=Jack, 11=Queen, 12=King.
+ * Ranks 9..12 all count as 10 in Blackjack scoring.
+ */
+export const BLACKJACK_RANKS = 13;
+
+/**
+ * A Blackjack deal: a sequence of 32 card ranks. The engine consumes them
+ * in order as cards are drawn — initial deal first (P/D/P/D), then any
+ * hits/doubles/splits.
+ */
+export interface BlackjackOutcome {
+  readonly cards: readonly number[];
+}
+
+/**
+ * Derives a Blackjack shoe (32 card ranks) for a single round.
+ *
+ * @param serverSeed 64-char hex
+ * @param clientSeed printable ASCII
+ * @param nonce per-seed counter
+ */
+export function deriveBlackjack(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number,
+): BlackjackOutcome {
+  const floats = deriveFloats(serverSeed, clientSeed, nonce, BLACKJACK_MAX_CARDS);
+  const cards: number[] = [];
+  for (const f of floats) {
+    cards.push(Math.floor(f * BLACKJACK_RANKS));
+  }
+  return { cards };
+}
+
 // ─── Crash ────────────────────────────────────────────────────────────────
 //
 // Intentionally deferred to its own implementation phase together with the

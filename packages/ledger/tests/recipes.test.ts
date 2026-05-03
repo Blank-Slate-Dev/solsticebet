@@ -7,6 +7,7 @@ import {
   parseAmount,
   recordAdjustment,
   recordBetLoss,
+  recordBetPartialPayout,
   recordBetRefund,
   recordBetStake,
   recordBetWin,
@@ -154,6 +155,105 @@ describe('recordBetWin', () => {
         betId: 'push-1',
       }),
     ).rejects.toThrow(/payout > stake/);
+  });
+});
+
+describe('recordBetPartialPayout', () => {
+  it('splits the escrow between user (payout) and house (remainder)', async () => {
+    await recordBetStake(repo, {
+      userAccountId: USER,
+      escrowAccountId: ESCROW,
+      stake: parseAmount('10'),
+      currency: 'INTERNAL_USDT',
+      betId: 'partial-1',
+    });
+
+    // Pay back 30% of stake
+    await recordBetPartialPayout(repo, {
+      userAccountId: USER,
+      escrowAccountId: ESCROW,
+      houseAccountId: HOUSE,
+      stake: parseAmount('10'),
+      payout: parseAmount('3'),
+      currency: 'INTERNAL_USDT',
+      betId: 'partial-1',
+    });
+
+    // User: 1000 - 10 + 3 = 993
+    expect(await repo.getBalance(USER, 'INTERNAL_USDT')).toBe(parseAmount('993'));
+    // Escrow: 0
+    expect(await repo.getBalance(ESCROW, 'INTERNAL_USDT')).toBe(0n);
+    // House: -1000 + 7 = -993
+    expect(await repo.getBalance(HOUSE, 'INTERNAL_USDT')).toBe(-parseAmount('993'));
+  });
+
+  it('rejects payout >= stake (use Win or Refund)', async () => {
+    await recordBetStake(repo, {
+      userAccountId: USER,
+      escrowAccountId: ESCROW,
+      stake: parseAmount('10'),
+      currency: 'INTERNAL_USDT',
+      betId: 'partial-equal',
+    });
+    await expect(
+      recordBetPartialPayout(repo, {
+        userAccountId: USER,
+        escrowAccountId: ESCROW,
+        houseAccountId: HOUSE,
+        stake: parseAmount('10'),
+        payout: parseAmount('10'),
+        currency: 'INTERNAL_USDT',
+        betId: 'partial-equal',
+      }),
+    ).rejects.toThrow(/0 < payout < stake/);
+    await expect(
+      recordBetPartialPayout(repo, {
+        userAccountId: USER,
+        escrowAccountId: ESCROW,
+        houseAccountId: HOUSE,
+        stake: parseAmount('10'),
+        payout: parseAmount('15'),
+        currency: 'INTERNAL_USDT',
+        betId: 'partial-over',
+      }),
+    ).rejects.toThrow(/0 < payout < stake/);
+  });
+
+  it('rejects non-positive payout', async () => {
+    await expect(
+      recordBetPartialPayout(repo, {
+        userAccountId: USER,
+        escrowAccountId: ESCROW,
+        houseAccountId: HOUSE,
+        stake: parseAmount('10'),
+        payout: 0n,
+        currency: 'INTERNAL_USDT',
+        betId: 'partial-zero',
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('is idempotent', async () => {
+    await recordBetStake(repo, {
+      userAccountId: USER,
+      escrowAccountId: ESCROW,
+      stake: parseAmount('10'),
+      currency: 'INTERNAL_USDT',
+      betId: 'partial-idem',
+    });
+    const input = {
+      userAccountId: USER,
+      escrowAccountId: ESCROW,
+      houseAccountId: HOUSE,
+      stake: parseAmount('10'),
+      payout: parseAmount('4'),
+      currency: 'INTERNAL_USDT' as const,
+      betId: 'partial-idem',
+    };
+    await recordBetPartialPayout(repo, input);
+    const balanceAfterFirst = await repo.getBalance(USER, 'INTERNAL_USDT');
+    await recordBetPartialPayout(repo, input);
+    expect(await repo.getBalance(USER, 'INTERNAL_USDT')).toBe(balanceAfterFirst);
   });
 });
 

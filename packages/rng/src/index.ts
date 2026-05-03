@@ -14,6 +14,8 @@
 
 export { hmac, deriveFloat, deriveFloats, FLOATS_PER_HMAC } from './core.js';
 
+export { bytesToHex, hexToBytes, timingSafeEqualBytes, utf8ToBytes } from './hex.js';
+
 export {
   generateServerSeed,
   generateDefaultClientSeed,
@@ -21,9 +23,30 @@ export {
   verifyServerSeed,
 } from './seed.js';
 
-export { deriveDice, deriveMines, derivePlinko, MINES_TILE_COUNT } from './games.js';
+export {
+  BACCARAT_MAX_CARDS,
+  BACCARAT_RANKS,
+  BLACKJACK_MAX_CARDS,
+  BLACKJACK_RANKS,
+  deriveBaccarat,
+  deriveBlackjack,
+  deriveDice,
+  deriveMines,
+  derivePlinko,
+  deriveRoulette,
+  MINES_TILE_COUNT,
+  ROULETTE_POCKETS,
+} from './games.js';
 
-export type { DiceOutcome, MinesOutcome, PlinkoOutcome, PlinkoRowCount } from './games.js';
+export type {
+  BaccaratOutcome,
+  BlackjackOutcome,
+  DiceOutcome,
+  MinesOutcome,
+  PlinkoOutcome,
+  PlinkoRowCount,
+  RouletteOutcome,
+} from './games.js';
 
 export {
   assertValidServerSeed,
