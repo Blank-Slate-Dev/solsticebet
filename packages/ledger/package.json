@@ -13,14 +13,17 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src tests",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist .turbo coverage *.tsbuildinfo"
   },
   "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^2.1.8",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }

@@ -29,6 +29,7 @@ The foundational stack and major architectural choices are:
 ## Consequences
 
 **Positive:**
+
 - All choices are battle-tested in this domain
 - Cost-efficient at scale ($650/mo at start, ~$1.5–3k/mo at $1M GGR)
 - Architecture supports the certification process from day one
@@ -36,12 +37,14 @@ The foundational stack and major architectural choices are:
 - Crypto-only at launch dramatically simplifies licensing and compliance
 
 **Negative:**
+
 - Hetzner requires more ops skill than AWS — partially mitigated by IaC and managed Postgres
 - No fiat means a smaller addressable market initially
 - Pixi.js for originals adds a renderer dependency the team needs to learn
 - Restricted-package model adds review latency on PRs to those packages
 
 **Neutral:**
+
 - We are explicitly not building sportsbook, slots, or live dealer in v1. They are deferred.
 - We are explicitly not integrating directly on-chain. Custodial via provider in v1.
 

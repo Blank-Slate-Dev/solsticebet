@@ -21,17 +21,17 @@ The architecture is opinionated. Some choices will look heavier than necessary f
 
 **Solstice is a licensed crypto-only online casino** offering originals (Crash, Mines, Plinko, Dice) and table games (Blackjack, Roulette, Baccarat) to non-restricted markets globally, with sportsbook explicitly out of scope for v1.
 
-| Attribute | Value |
-|---|---|
-| Brand | Solstice |
-| Primary domain | solsticebet.com |
-| Licence | Anjouan (target) |
-| Markets | Non-restricted globally; Australia geo-blocked; full restricted-jurisdiction list maintained in `/packages/compliance/restricted-jurisdictions.json` |
-| Currencies | BTC, ETH, USDT (ERC-20 + TRC-20), SOL, LTC at launch |
-| Game scope v1 | Crash, Mines, Plinko, Dice, Blackjack, European Roulette, Baccarat |
-| Out of scope v1 | Sportsbook, slots aggregation, live dealer, fiat rails, mobile native apps |
-| Provably fair | Yes — every original game outcome verifiable independently |
-| Target launch | Soft launch ~6 months from kickoff, full launch on licensor sign-off |
+| Attribute       | Value                                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Brand           | Solstice                                                                                                                                             |
+| Primary domain  | solsticebet.com                                                                                                                                      |
+| Licence         | Anjouan (target)                                                                                                                                     |
+| Markets         | Non-restricted globally; Australia geo-blocked; full restricted-jurisdiction list maintained in `/packages/compliance/restricted-jurisdictions.json` |
+| Currencies      | BTC, ETH, USDT (ERC-20 + TRC-20), SOL, LTC at launch                                                                                                 |
+| Game scope v1   | Crash, Mines, Plinko, Dice, Blackjack, European Roulette, Baccarat                                                                                   |
+| Out of scope v1 | Sportsbook, slots aggregation, live dealer, fiat rails, mobile native apps                                                                           |
+| Provably fair   | Yes — every original game outcome verifiable independently                                                                                           |
+| Target launch   | Soft launch ~6 months from kickoff, full launch on licensor sign-off                                                                                 |
 
 ---
 
@@ -101,19 +101,19 @@ External integrations:
 
 ### 4.1 Languages and frameworks
 
-| Layer | Choice | Reason |
-|---|---|---|
-| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind | Maintained, SSR for SEO on marketing pages, RSC for fast lobby loads |
-| Game rendering | Pixi.js v8 for originals (Crash/Plinko/Mines), React + Framer Motion for table games | Pixi for 60fps Canvas animation, React for state-heavy turn-based games |
-| Game server | Fastify v5 + TypeScript on Node.js 22 LTS | Lower overhead than Express, native async support, mature WS ecosystem |
-| WebSocket | `ws` library (native), not Socket.io | Lower per-connection memory, no fallback negotiation overhead, control over framing |
-| Admin panel | Next.js 14 + TypeScript + Tailwind + shadcn/ui | Same stack as web app reduces context switch |
-| Database | PostgreSQL 17 | Boring, transactional, audited, supports the ledger pattern natively |
-| Cache | Redis 7 | Industry standard, supports the patterns we need (pub/sub, sorted sets for leaderboards, atomic counters) |
-| Build/lint | Turborepo monorepo, ESLint + Prettier, strict TypeScript everywhere | One source of truth, atomic cross-package commits |
-| Testing | Vitest (unit), Playwright (E2E), k6 (load) | Vitest for speed, Playwright is the standard, k6 for game-server load |
-| Infrastructure as code | Terraform + Ansible | Terraform for Hetzner Cloud + Cloudflare, Ansible for dedicated server config |
-| CI/CD | GitHub Actions | Free for our scale, integrates with branch protection |
+| Layer                  | Choice                                                                               | Reason                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Frontend               | Next.js 14 (App Router) + TypeScript + Tailwind                                      | Maintained, SSR for SEO on marketing pages, RSC for fast lobby loads                                      |
+| Game rendering         | Pixi.js v8 for originals (Crash/Plinko/Mines), React + Framer Motion for table games | Pixi for 60fps Canvas animation, React for state-heavy turn-based games                                   |
+| Game server            | Fastify v5 + TypeScript on Node.js 22 LTS                                            | Lower overhead than Express, native async support, mature WS ecosystem                                    |
+| WebSocket              | `ws` library (native), not Socket.io                                                 | Lower per-connection memory, no fallback negotiation overhead, control over framing                       |
+| Admin panel            | Next.js 14 + TypeScript + Tailwind + shadcn/ui                                       | Same stack as web app reduces context switch                                                              |
+| Database               | PostgreSQL 17                                                                        | Boring, transactional, audited, supports the ledger pattern natively                                      |
+| Cache                  | Redis 7                                                                              | Industry standard, supports the patterns we need (pub/sub, sorted sets for leaderboards, atomic counters) |
+| Build/lint             | Turborepo monorepo, ESLint + Prettier, strict TypeScript everywhere                  | One source of truth, atomic cross-package commits                                                         |
+| Testing                | Vitest (unit), Playwright (E2E), k6 (load)                                           | Vitest for speed, Playwright is the standard, k6 for game-server load                                     |
+| Infrastructure as code | Terraform + Ansible                                                                  | Terraform for Hetzner Cloud + Cloudflare, Ansible for dedicated server config                             |
+| CI/CD                  | GitHub Actions                                                                       | Free for our scale, integrates with branch protection                                                     |
 
 ### 4.2 Hosting
 
@@ -123,17 +123,17 @@ Trade-off considered: AWS/GCP managed services are easier but 5–10x the cost a
 
 **Caveat documented for future:** if we hire a DevOps contractor whose fluency is exclusively AWS, the cost difference is worth less than their productivity. Revisit at hiring time.
 
-| Component | Spec | Approx cost |
-|---|---|---|
-| Game server (3x for HA) | Hetzner AX52 dedicated, Ryzen 7 7700, 64GB RAM, NVMe | €207/mo |
-| Postgres (primary + replica) | Hetzner managed Postgres, prod tier | ~€50/mo |
-| Redis | Hetzner Cloud CCX13, self-hosted | ~€30/mo |
-| Web app | Vercel Pro | $20/mo |
-| Admin panel | Hetzner Cloud CX22, self-hosted Next.js | €5/mo |
-| Cloudflare | Business plan + Spectrum | ~$300/mo |
-| S3-compatible (Hetzner Storage Box or Wasabi) | 1TB | ~$6/mo |
-| Backups (offsite) | Backblaze B2 | ~$10/mo |
-| **Total month 1** | | **~$650/mo** |
+| Component                                     | Spec                                                 | Approx cost  |
+| --------------------------------------------- | ---------------------------------------------------- | ------------ |
+| Game server (3x for HA)                       | Hetzner AX52 dedicated, Ryzen 7 7700, 64GB RAM, NVMe | €207/mo      |
+| Postgres (primary + replica)                  | Hetzner managed Postgres, prod tier                  | ~€50/mo      |
+| Redis                                         | Hetzner Cloud CCX13, self-hosted                     | ~€30/mo      |
+| Web app                                       | Vercel Pro                                           | $20/mo       |
+| Admin panel                                   | Hetzner Cloud CX22, self-hosted Next.js              | €5/mo        |
+| Cloudflare                                    | Business plan + Spectrum                             | ~$300/mo     |
+| S3-compatible (Hetzner Storage Box or Wasabi) | 1TB                                                  | ~$6/mo       |
+| Backups (offsite)                             | Backblaze B2                                         | ~$10/mo      |
+| **Total month 1**                             |                                                      | **~$650/mo** |
 
 Locations: Helsinki + Falkenstein + Nuremberg (Hetzner's three EU DCs) for game server HA. Database primary in Falkenstein with read replica in Helsinki.
 
@@ -205,6 +205,7 @@ solstice/
 **Hosted on Hetzner dedicated.** The most important service. Three instances behind Cloudflare load balancer (sticky-session for WS connections).
 
 Responsibilities:
+
 - Authenticate WS connections via session token
 - Handle bet placement: validate → ledger debit → RNG outcome → ledger credit (if win) → response
 - Run multiplayer Crash rounds (single round-robin per shard, synchronised via Redis pub/sub)
@@ -213,6 +214,7 @@ Responsibilities:
 - Enforce compliance gates: geo-block check, KYC tier check, self-exclusion check before any bet
 
 Things the game server does not do:
+
 - Process deposits / withdrawals (handled by wallet service)
 - Render anything (web app's job)
 - Store player PII beyond what's needed for the live session
@@ -237,6 +239,7 @@ Admin auth uses hardware key (YubiKey) for 2FA, no exceptions, including in dev.
 **Logical service inside the game server in v1.** May be extracted to its own process post-launch when crypto integration matures.
 
 Responsibilities:
+
 - Generate deposit addresses (delegated to NOWPayments / CoinsPaid)
 - Listen to deposit webhooks, credit ledger atomically with idempotency
 - Process withdrawal requests: validate → KYC tier check → manual approval queue (over threshold) → broadcast to provider → ledger update
@@ -248,6 +251,7 @@ Responsibilities:
 **Logical service inside the game server.** Synchronous gate on every bet.
 
 Checks executed in order on every bet:
+
 1. Session valid?
 2. Account not self-excluded?
 3. IP geo-location allowed for this jurisdiction? (MaxMind DB updated weekly)
@@ -302,6 +306,7 @@ CREATE UNIQUE INDEX idx_ledger_idempotency ON ledger_entries(idempotency_key) WH
 ```
 
 **Rules:**
+
 - Every transaction is at least two entries: a debit on one account and a credit on another. The sum of all entries for one `transaction_id` must equal zero. Enforced by trigger.
 - The ledger is **append-only**. There is no UPDATE or DELETE on `ledger_entries`. Corrections are made by writing reversing entries.
 - Account balance is **always derived**: `SELECT SUM(amount) FROM ledger_entries WHERE account_id = $1 AND currency = $2`. Cached in Redis with cache-invalidate-on-write.
@@ -324,22 +329,23 @@ This pattern is non-negotiable. The licensor will inspect it. The certification 
 
 ### 6.3 Redis usage
 
-| Key pattern | Purpose | TTL |
-|---|---|---|
-| `session:{token}` | Session lookup | 7d |
-| `balance:{user_id}:{currency}` | Cached balance | 60s, invalidated on ledger write |
-| `crash:current` | Current Crash round state | live |
-| `crash:history:24h` | Last 24h of Crash multipliers | 24h |
-| `ratelimit:{ip}:{endpoint}` | Token bucket | 1m |
-| `ratelimit:{user_id}:bet` | Per-user bet rate limit | 10s |
-| `leaderboard:weekly` | Sorted set, GGR per user | 7d |
-| `live:bets` | Pub/sub channel for live bet feed | n/a |
+| Key pattern                    | Purpose                           | TTL                              |
+| ------------------------------ | --------------------------------- | -------------------------------- |
+| `session:{token}`              | Session lookup                    | 7d                               |
+| `balance:{user_id}:{currency}` | Cached balance                    | 60s, invalidated on ledger write |
+| `crash:current`                | Current Crash round state         | live                             |
+| `crash:history:24h`            | Last 24h of Crash multipliers     | 24h                              |
+| `ratelimit:{ip}:{endpoint}`    | Token bucket                      | 1m                               |
+| `ratelimit:{user_id}:bet`      | Per-user bet rate limit           | 10s                              |
+| `leaderboard:weekly`           | Sorted set, GGR per user          | 7d                               |
+| `live:bets`                    | Pub/sub channel for live bet feed | n/a                              |
 
 Redis is treated as ephemeral. We can lose Redis without losing data; we'd lose convenience and have to recompute caches.
 
 ### 6.4 Object storage
 
 S3-compatible bucket (Hetzner Storage Box or Wasabi) holds:
+
 - Application logs (rotated daily, retained 7 years per licensing requirement)
 - Database backups
 - KYC documents (encrypted client-side with per-user keys before upload)
@@ -354,11 +360,13 @@ Full spec lives in `docs/RNG.md`. Summary here.
 **Algorithm:** HMAC-SHA256.
 
 **Inputs:**
+
 - `serverSeed` — 64 hex chars, generated by us, kept secret until rotated
 - `clientSeed` — 64 hex chars, set by the user, can be changed anytime (forces a server seed rotation if we'd be revealing the same one)
 - `nonce` — incrementing counter per (user, server seed) pair, starting at 0
 
 **Output derivation:**
+
 ```
 hmac = HMAC_SHA256(key=serverSeed, message=`${clientSeed}:${nonce}`)
 ```
@@ -366,6 +374,7 @@ hmac = HMAC_SHA256(key=serverSeed, message=`${clientSeed}:${nonce}`)
 The 64-hex-char HMAC output is then sliced into chunks (typically 4-byte) and converted to floats in `[0, 1)`, which each game maps to its own outcome space (e.g. Crash: multiplier curve; Mines: tile permutation; Dice: roll value).
 
 **Lifecycle:**
+
 1. Server generates new `serverSeed`, computes `serverSeedHash = SHA256(serverSeed)`, **publishes the hash before any bet using this seed**.
 2. User plays bets; nonce increments. The hash is visible to the user, the seed is not.
 3. When the user requests rotation (or the hash is exhausted, or after a fixed nonce limit), the server **publishes the now-revealed serverSeed**, and starts a new one.
@@ -374,6 +383,7 @@ The 64-hex-char HMAC output is then sliced into chunks (typically 4-byte) and co
 **Verification UI:** every bet receipt links to a verification page at `solsticebet.com/verify/{betId}` that displays the seeds and lets the user re-run the calculation, including in JavaScript on their own machine via a published reference implementation.
 
 **Implementation rules:**
+
 - The RNG package has 100% line coverage on its core derivation function. No exceptions.
 - The package exposes a single function per game type, no escape hatches.
 - The seeds table is in a separate Postgres schema with restricted access.
@@ -490,6 +500,7 @@ USDT deposits skip the conversion (1:1).
 ### 9.3 Provider choice
 
 **v1 will use one of NOWPayments or CoinsPaid.** Final selection deferred to integration phase based on:
+
 - Which one will accept us pre-licence (likely neither fully — we'll have a sandbox account until licensed)
 - Settlement speed
 - Fee structure
@@ -504,12 +515,12 @@ We do not integrate directly on-chain in v1. Direct on-chain is a v2 problem req
 
 ### 10.1 KYC tiers
 
-| Tier | Triggered by | Required docs | Limits |
-|---|---|---|---|
-| 0 | Account creation | Email verification | Cannot withdraw |
-| 1 | First deposit | Email + declared name + DOB + country | Withdraw up to a low daily threshold |
-| 2 | Withdrawal over threshold OR cumulative deposits over threshold | ID document + selfie + proof of address (Sumsub) | Standard limits |
-| 3 (VIP / large transactions) | Withdrawals or deposits over a high threshold | Source of funds documentation | Higher limits, manual review |
+| Tier                         | Triggered by                                                    | Required docs                                    | Limits                               |
+| ---------------------------- | --------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------ |
+| 0                            | Account creation                                                | Email verification                               | Cannot withdraw                      |
+| 1                            | First deposit                                                   | Email + declared name + DOB + country            | Withdraw up to a low daily threshold |
+| 2                            | Withdrawal over threshold OR cumulative deposits over threshold | ID document + selfie + proof of address (Sumsub) | Standard limits                      |
+| 3 (VIP / large transactions) | Withdrawals or deposits over a high threshold                   | Source of funds documentation                    | Higher limits, manual review         |
 
 Specific thresholds are configured in `packages/compliance/thresholds.ts` and approved by Oakley. They will be tuned to licensor requirements at certification.
 
@@ -524,6 +535,7 @@ Specific thresholds are configured in `packages/compliance/thresholds.ts` and ap
 ### 10.3 Responsible gambling
 
 Mandatory features built into player UI from day one:
+
 - **Deposit limits:** daily, weekly, monthly, user-configurable, 24h cool-off to increase, instant to decrease
 - **Session limits:** time-based reality checks (5/15/30/60 min)
 - **Loss limits:** daily/weekly maximum loss caps
@@ -534,6 +546,7 @@ Mandatory features built into player UI from day one:
 ### 10.4 Audit logging
 
 Every action that changes state in the system writes to `audit_log`:
+
 - Admin actions (mandatory, includes balance adjustments, KYC approvals, withdrawal approvals, account suspensions)
 - User account changes (password changes, 2FA toggle, limit changes, self-exclusion changes)
 - System actions (automated suspensions, fraud flags)
@@ -604,6 +617,7 @@ Every action that changes state in the system writes to `audit_log`:
 Structured JSON logs via Pino. Every log line includes `request_id`, `user_id` (when authenticated), `service`, `severity`. Logs ship to Grafana Cloud Loki.
 
 **What we log:**
+
 - Every HTTP request (path, status, latency, user_id)
 - Every WS message (type, user_id, latency)
 - Every bet (full lifecycle)
@@ -613,6 +627,7 @@ Structured JSON logs via Pino. Every log line includes `request_id`, `user_id` (
 - Every error with full stack trace via Sentry
 
 **What we don't log:**
+
 - Passwords (ever)
 - 2FA secrets
 - Session tokens (only the hash for correlation)
@@ -622,6 +637,7 @@ Structured JSON logs via Pino. Every log line includes `request_id`, `user_id` (
 ### 12.2 Metrics
 
 Prometheus-compatible metrics from every service, scraped by Grafana Cloud:
+
 - HTTP request rate, latency percentiles (p50/p95/p99), error rate per endpoint
 - WS connection count, message rate, dropped frames
 - Bet rate per game, average stake, payout-to-stake ratio (rolling 1h)
@@ -635,6 +651,7 @@ Prometheus-compatible metrics from every service, scraped by Grafana Cloud:
 PagerDuty or Grafana OnCall, on-call rotation TBD when team grows beyond 1.
 
 Critical alerts (page immediately):
+
 - Production game-server down for any instance > 2min
 - Database primary down or replication lag > 30s
 - Wallet reconciliation drift > 0.5%
@@ -643,6 +660,7 @@ Critical alerts (page immediately):
 - Any 5xx rate spike > 1% of requests
 
 Warning alerts (Slack, no page):
+
 - Elevated 4xx rates
 - Approaching rate limits on external providers
 - Cert expiry within 30 days
@@ -662,6 +680,7 @@ Warning alerts (Slack, no page):
 ### 13.2 CI
 
 Every PR runs:
+
 1. Type check (`tsc --noEmit` across all packages via Turbo)
 2. Lint
 3. Unit tests (Vitest)
@@ -679,11 +698,11 @@ PRs merge only on green and required approvals (CODEOWNERS-enforced).
 
 ### 13.4 Environments
 
-| Env | URL | Purpose |
-|---|---|---|
-| Local | `localhost` | Dev |
+| Env     | URL                            | Purpose                            |
+| ------- | ------------------------------ | ---------------------------------- |
+| Local   | `localhost`                    | Dev                                |
 | Staging | `staging.solsticebet.internal` | Pre-prod testing, never real money |
-| Prod | `solsticebet.com` | Real money |
+| Prod    | `solsticebet.com`              | Real money                         |
 
 Prod is the only environment with real crypto rails. Staging uses sandbox/testnet keys.
 
@@ -710,29 +729,29 @@ Decisions that look like gaps but are intentional:
 
 Workstreams run in parallel where possible. Dates are deliberately not committed here — they belong on a project tracker, not in an architecture document.
 
-| # | Workstream | Depends on | Owner |
-|---|---|---|---|
-| 1 | Legal: AU opinion, Anjouan filing, offshore entity | Nothing | Oakley + lawyer |
-| 2 | Repo setup, monorepo, CI/CD, infrastructure-as-code | 1 (entity for hosting) | Oakley |
-| 3 | RNG package + 100% test coverage | 2 | Oakley |
-| 4 | Database schema + migrations + ledger package | 2 | Oakley |
-| 5 | Auth + sessions + 2FA + Turnstile | 4 | Contractor 1 |
-| 6 | Wallet + crypto provider integration (sandbox) | 4 | Oakley |
-| 7 | Compliance package (geo, KYC, limits, self-excl) | 4 | Oakley + Contractor 1 |
-| 8 | Game: Dice (validates pipeline) | 3, 4 | Contractor 1 |
-| 9 | Game: Mines | 8 | Contractor 1 |
-| 10 | Game: Crash | 8, 9 | Contractor 1 + 2 |
-| 11 | Game: Plinko | 8 | Contractor 2 |
-| 12 | Game: Blackjack | 8 | Contractor 2 |
-| 13 | Game: European Roulette | 8 | Contractor 2 |
-| 14 | Game: Baccarat | 8 | Contractor 2 |
-| 15 | Web app shell (lobby, wallet UI, profile, KYC) | 5, 7 | Contractor 1 |
-| 16 | Admin panel | 4, 7 | Oakley |
-| 17 | Sumsub KYC integration | 7 | Oakley |
-| 18 | Verification page (provably-fair UI) | 3 | Contractor 1 |
-| 19 | Pen test, RNG cert submission, game audits | 8–14 | External labs |
-| 20 | Soft launch (capped deposits, one or two markets) | 15, 19 | Oakley |
-| 21 | Licensor sign-off, public launch | 1, 19, 20 | Oakley |
+| #   | Workstream                                          | Depends on             | Owner                 |
+| --- | --------------------------------------------------- | ---------------------- | --------------------- |
+| 1   | Legal: AU opinion, Anjouan filing, offshore entity  | Nothing                | Oakley + lawyer       |
+| 2   | Repo setup, monorepo, CI/CD, infrastructure-as-code | 1 (entity for hosting) | Oakley                |
+| 3   | RNG package + 100% test coverage                    | 2                      | Oakley                |
+| 4   | Database schema + migrations + ledger package       | 2                      | Oakley                |
+| 5   | Auth + sessions + 2FA + Turnstile                   | 4                      | Contractor 1          |
+| 6   | Wallet + crypto provider integration (sandbox)      | 4                      | Oakley                |
+| 7   | Compliance package (geo, KYC, limits, self-excl)    | 4                      | Oakley + Contractor 1 |
+| 8   | Game: Dice (validates pipeline)                     | 3, 4                   | Contractor 1          |
+| 9   | Game: Mines                                         | 8                      | Contractor 1          |
+| 10  | Game: Crash                                         | 8, 9                   | Contractor 1 + 2      |
+| 11  | Game: Plinko                                        | 8                      | Contractor 2          |
+| 12  | Game: Blackjack                                     | 8                      | Contractor 2          |
+| 13  | Game: European Roulette                             | 8                      | Contractor 2          |
+| 14  | Game: Baccarat                                      | 8                      | Contractor 2          |
+| 15  | Web app shell (lobby, wallet UI, profile, KYC)      | 5, 7                   | Contractor 1          |
+| 16  | Admin panel                                         | 4, 7                   | Oakley                |
+| 17  | Sumsub KYC integration                              | 7                      | Oakley                |
+| 18  | Verification page (provably-fair UI)                | 3                      | Contractor 1          |
+| 19  | Pen test, RNG cert submission, game audits          | 8–14                   | External labs         |
+| 20  | Soft launch (capped deposits, one or two markets)   | 15, 19                 | Oakley                |
+| 21  | Licensor sign-off, public launch                    | 1, 19, 20              | Oakley                |
 
 Workstream 3 (RNG) is the **next deliverable after this document**. It's the foundation; nothing real gets built before it.
 
@@ -754,29 +773,29 @@ These are decisions deferred but tracked, to be resolved before they block progr
 
 ## 17. Glossary
 
-| Term | Meaning |
-|---|---|
-| GGR | Gross Gaming Revenue — total stakes minus total payouts |
-| RTP | Return to Player — long-run percentage of stakes paid back as winnings |
-| KYC | Know Your Customer — identity verification |
-| AML | Anti-Money-Laundering |
-| RNG | Random Number Generator |
-| WS | WebSocket |
-| HMAC | Hash-based Message Authentication Code |
+| Term          | Meaning                                                                                        |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| GGR           | Gross Gaming Revenue — total stakes minus total payouts                                        |
+| RTP           | Return to Player — long-run percentage of stakes paid back as winnings                         |
+| KYC           | Know Your Customer — identity verification                                                     |
+| AML           | Anti-Money-Laundering                                                                          |
+| RNG           | Random Number Generator                                                                        |
+| WS            | WebSocket                                                                                      |
+| HMAC          | Hash-based Message Authentication Code                                                         |
 | Provably fair | Class of casino games where a player can independently verify each outcome was not manipulated |
-| Server seed | Casino-generated secret used in provably-fair RNG |
-| Client seed | Player-controlled value mixed into provably-fair RNG |
-| Ledger | Append-only record of every credit and debit |
-| House | The casino's own accounts in the ledger |
-| Escrow | Temporary account holding stakes mid-bet |
+| Server seed   | Casino-generated secret used in provably-fair RNG                                              |
+| Client seed   | Player-controlled value mixed into provably-fair RNG                                           |
+| Ledger        | Append-only record of every credit and debit                                                   |
+| House         | The casino's own accounts in the ledger                                                        |
+| Escrow        | Temporary account holding stakes mid-bet                                                       |
 
 ---
 
 ## 18. Document changelog
 
-| Version | Date | Author | Change |
-|---|---|---|---|
-| 1.0 | 2026-05-03 | Oakley + Claude | Initial draft |
+| Version | Date       | Author          | Change        |
+| ------- | ---------- | --------------- | ------------- |
+| 1.0     | 2026-05-03 | Oakley + Claude | Initial draft |
 
 ---
 

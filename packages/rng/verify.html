@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solstice — Provably-Fair Verifier</title>
+    <style>
+      :root {
+        --bg: #0a0e1a;
+        --fg: #e6edf7;
+        --muted: #7a8aa3;
+        --accent: #38d6e3;
+        --accent-deep: #1e4fbc;
+        --border: #1c2438;
+        --card: #11172a;
+        --warn: #f7b955;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 14px/1.5 system-ui, -apple-system, sans-serif;
+        padding: 32px 16px;
+      }
+      .container {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+      .lede {
+        color: var(--muted);
+        margin-bottom: 32px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--fg);
+        border-radius: 4px;
+        font: inherit;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      .row {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .row.cols-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+      .row.cols-3 {
+        grid-template-columns: 2fr 1fr 1fr;
+      }
+      button {
+        background: var(--accent);
+        color: var(--bg);
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 8px;
+      }
+      button:hover {
+        background: var(--accent-deep);
+        color: var(--fg);
+      }
+      .result {
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        background: var(--bg);
+        padding: 12px;
+        border-radius: 4px;
+        margin-top: 8px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .result-key {
+        color: var(--muted);
+      }
+      .warn {
+        color: var(--warn);
+        font-size: 12px;
+        margin-top: 8px;
+      }
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Solstice — Provably-Fair Verifier</h1>
+      <p class="lede">
+        Independently verify any bet outcome. This page runs entirely in your browser.
+        No data is sent anywhere. View the page source for the full algorithm.
+      </p>
+
+      <div class="card">
+        <div class="row">
+          <div>
+            <label for="serverSeed">Server Seed (revealed)</label>
+            <input
+              id="serverSeed"
+              placeholder="64 lowercase hex characters"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="clientSeed">Client Seed</label>
+            <input id="clientSeed" autocomplete="off" spellcheck="false" />
+          </div>
+        </div>
+        <div class="row cols-3">
+          <div>
+            <label for="game">Game</label>
+            <select id="game">
+              <option value="dice">Dice</option>
+              <option value="mines">Mines (5×5)</option>
+              <option value="plinko-8">Plinko (8 rows)</option>
+              <option value="plinko-12">Plinko (12 rows)</option>
+              <option value="plinko-16">Plinko (16 rows)</option>
+            </select>
+          </div>
+          <div>
+            <label for="nonce">Nonce</label>
+            <input id="nonce" type="number" min="0" value="0" />
+          </div>
+          <div>
+            <label for="cursor">Cursor</label>
+            <input id="cursor" type="number" min="0" value="0" />
+          </div>
+        </div>
+        <button id="verify">Verify</button>
+        <p class="warn">
+          Tip: paste your bet's seed values exactly as shown on your bet receipt.
+          Whitespace and case matter.
+        </p>
+      </div>
+
+      <div class="card">
+        <label>Result</label>
+        <div id="result" class="result">Enter values and click Verify.</div>
+      </div>
+
+      <p style="color: var(--muted); font-size: 12px; text-align: center; margin-top: 32px">
+        Algorithm: HMAC-SHA256 with Stake-style float construction. Specification:
+        <code>docs/RNG.md</code> in the Solstice repo.
+      </p>
+    </div>
+
+    <script>
+      // ───────────────────────────────────────────────────────────────
+      // Solstice RNG — Reference verification implementation.
+      //
+      // This is the exact algorithm the casino uses. If you re-derive
+      // your bet here and get a different outcome than the casino
+      // showed you, the casino has a bug. File a complaint.
+      //
+      // The algorithm is also documented in docs/RNG.md.
+      // ───────────────────────────────────────────────────────────────
+
+      async function hmacSha256(keyBytes, messageBytes) {
+        const key = await crypto.subtle.importKey(
+          'raw',
+          keyBytes,
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign'],
+        );
+        const sig = await crypto.subtle.sign('HMAC', key, messageBytes);
+        return new Uint8Array(sig);
+      }
+
+      function hexToBytes(hex) {
+        if (!/^[0-9a-f]+$/.test(hex) || hex.length % 2 !== 0) {
+          throw new Error('Invalid hex string');
+        }
+        const out = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < hex.length; i += 2) {
+          out[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+        }
+        return out;
+      }
+
+      function utf8(s) {
+        return new TextEncoder().encode(s);
+      }
+
+      function deriveFloat(hmacBytes, chunkIndex) {
+        const o = chunkIndex * 4;
+        return (
+          hmacBytes[o] / 0x100 +
+          hmacBytes[o + 1] / 0x10000 +
+          hmacBytes[o + 2] / 0x1000000 +
+          hmacBytes[o + 3] / 0x100000000
+        );
+      }
+
+      async function deriveFloats(serverSeed, clientSeed, nonce, count, startCursor = 0) {
+        const out = [];
+        let cursor = startCursor;
+        while (out.length < count) {
+          const msg = utf8(`${clientSeed}:${nonce}:${cursor}`);
+          const h = await hmacSha256(hexToBytes(serverSeed), msg);
+          for (let i = 0; i < 8 && out.length < count; i++) {
+            out.push(deriveFloat(h, i));
+          }
+          cursor += 1;
+        }
+        return out;
+      }
+
+      // ─── Game mappings ─────────────────────────────────────────────
+
+      async function deriveDice(serverSeed, clientSeed, nonce) {
+        const [f] = await deriveFloats(serverSeed, clientSeed, nonce, 1);
+        return Math.floor(f * 10000) / 100;
+      }
+
+      async function deriveMines(serverSeed, clientSeed, nonce) {
+        const N = 25;
+        const floats = await deriveFloats(serverSeed, clientSeed, nonce, N - 1);
+        const indices = [];
+        for (let i = 0; i < N; i++) indices.push(i);
+        for (let i = N - 1; i >= 1; i--) {
+          const j = Math.floor(floats[N - 1 - i] * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        return indices;
+      }
+
+      async function derivePlinko(serverSeed, clientSeed, nonce, rows) {
+        const floats = await deriveFloats(serverSeed, clientSeed, nonce, rows);
+        const path = [];
+        let bucket = 0;
+        for (let i = 0; i < rows; i++) {
+          if (floats[i] < 0.5) path.push('L');
+          else {
+            path.push('R');
+            bucket += 1;
+          }
+        }
+        return { path: path.join(''), bucket };
+      }
+
+      // ─── UI ────────────────────────────────────────────────────────
+
+      const $ = (id) => document.getElementById(id);
+
+      $('verify').addEventListener('click', async () => {
+        const serverSeed = $('serverSeed').value.trim().toLowerCase();
+        const clientSeed = $('clientSeed').value;
+        const nonce = Number.parseInt($('nonce').value, 10);
+        const cursor = Number.parseInt($('cursor').value, 10);
+        const game = $('game').value;
+        const result = $('result');
+
+        try {
+          if (!/^[0-9a-f]{64}$/.test(serverSeed)) {
+            throw new Error('Server seed must be 64 lowercase hex characters');
+          }
+          if (!clientSeed || clientSeed.length > 64) {
+            throw new Error('Client seed must be 1–64 characters');
+          }
+          if (!Number.isInteger(nonce) || nonce < 0) {
+            throw new Error('Nonce must be a non-negative integer');
+          }
+          if (!Number.isInteger(cursor) || cursor < 0) {
+            throw new Error('Cursor must be a non-negative integer');
+          }
+
+          // Hash the server seed too — useful so the user can compare against
+          // the hash that was published to them before any bet.
+          const seedBytes = hexToBytes(serverSeed);
+          const hashBytes = new Uint8Array(
+            await crypto.subtle.digest('SHA-256', seedBytes),
+          );
+          const seedHash = Array.from(hashBytes)
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('');
+
+          let outcome;
+          if (game === 'dice') {
+            outcome = await deriveDice(serverSeed, clientSeed, nonce);
+            outcome = `Roll: ${outcome.toFixed(2)}`;
+          } else if (game === 'mines') {
+            const perm = await deriveMines(serverSeed, clientSeed, nonce);
+            outcome = `Tile permutation: [${perm.join(', ')}]`;
+          } else if (game.startsWith('plinko-')) {
+            const rows = Number.parseInt(game.split('-')[1], 10);
+            const r = await derivePlinko(serverSeed, clientSeed, nonce, rows);
+            outcome = `Path: ${r.path}\nBucket: ${r.bucket}`;
+          } else {
+            outcome = '(unknown game)';
+          }
+
+          result.textContent =
+            `${'─'.repeat(40)}\n` +
+            `Server seed hash (commit): ${seedHash}\n` +
+            `Server seed (revealed):    ${serverSeed}\n` +
+            `Client seed:               ${clientSeed}\n` +
+            `Nonce:                     ${nonce}\n` +
+            `Cursor:                    ${cursor}\n` +
+            `${'─'.repeat(40)}\n` +
+            `${outcome}\n` +
+            `${'─'.repeat(40)}\n` +
+            `\nIf this matches what the casino reported on your bet, the bet was fair.`;
+        } catch (err) {
+          result.textContent = `Error: ${err.message}`;
+        }
+      });
+    </script>
+  </body>
+</html>

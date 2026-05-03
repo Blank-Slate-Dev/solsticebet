@@ -25,25 +25,25 @@ pnpm --filter @solsticebet/rng test:watch
 
 ## Repository layout
 
-| Path | Purpose |
-|---|---|
-| `apps/web` | Player-facing Next.js app (solsticebet.com) |
-| `apps/admin` | Internal admin panel |
-| `apps/game-server` | Fastify + WebSocket game server |
-| `packages/rng` | ⚠️ **Restricted.** Provably-fair RNG. |
-| `packages/ledger` | ⚠️ **Restricted.** Double-entry ledger. |
-| `packages/wallet` | ⚠️ **Restricted.** Crypto deposit/withdraw. |
-| `packages/compliance` | ⚠️ **Restricted.** Geo, KYC, limits, self-exclusion. |
-| `packages/games/*` | Game engines |
-| `packages/auth` | Sessions, 2FA |
-| `packages/db` | Prisma schema, migrations |
-| `packages/ui` | Shared React components |
-| `packages/design` | Design tokens, Tailwind preset |
-| `packages/shared-types` | Cross-package TypeScript types |
-| `packages/observability` | Logging, metrics, tracing |
-| `packages/config` | Shared eslint/tsconfig presets |
-| `infra/` | Terraform + Ansible |
-| `docs/` | Architecture, schema, RNG spec, runbooks |
+| Path                     | Purpose                                              |
+| ------------------------ | ---------------------------------------------------- |
+| `apps/web`               | Player-facing Next.js app (solsticebet.com)          |
+| `apps/admin`             | Internal admin panel                                 |
+| `apps/game-server`       | Fastify + WebSocket game server                      |
+| `packages/rng`           | ⚠️ **Restricted.** Provably-fair RNG.                |
+| `packages/ledger`        | ⚠️ **Restricted.** Double-entry ledger.              |
+| `packages/wallet`        | ⚠️ **Restricted.** Crypto deposit/withdraw.          |
+| `packages/compliance`    | ⚠️ **Restricted.** Geo, KYC, limits, self-exclusion. |
+| `packages/games/*`       | Game engines                                         |
+| `packages/auth`          | Sessions, 2FA                                        |
+| `packages/db`            | Prisma schema, migrations                            |
+| `packages/ui`            | Shared React components                              |
+| `packages/design`        | Design tokens, Tailwind preset                       |
+| `packages/shared-types`  | Cross-package TypeScript types                       |
+| `packages/observability` | Logging, metrics, tracing                            |
+| `packages/config`        | Shared eslint/tsconfig presets                       |
+| `infra/`                 | Terraform + Ansible                                  |
+| `docs/`                  | Architecture, schema, RNG spec, runbooks             |
 
 ## Restricted packages
 
