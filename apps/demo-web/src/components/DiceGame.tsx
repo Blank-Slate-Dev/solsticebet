@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { formatAmountDisplay, parseAmount } from '@solsticebet/ledger';
 import {
@@ -14,6 +14,8 @@ import {
 
 import { useSession } from '@/lib/session-context';
 
+const ROLL_DURATION_MS = 800;
+
 export function DiceGame() {
   const { session, refresh, bumpNonce, bumpBetCount } = useSession();
   const [stake, setStake] = useState('1');
@@ -22,6 +24,15 @@ export function DiceGame() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<DiceBetOutcome | null>(null);
+  const [rolling, setRolling] = useState(false);
+  const [rollDisplay, setRollDisplay] = useState<number>(50);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   const multiplier = computeMultiplier(target, mode);
   const winChance = mode === 'under' ? target : 100 - target;
@@ -30,26 +41,46 @@ export function DiceGame() {
     if (session === null) return;
     setError(null);
     setBusy(true);
+    setRolling(true);
+    setLastResult(null);
+    // Cycle random numbers during the roll
+    intervalRef.current = setInterval(() => {
+      setRollDisplay(Math.random() * 100);
+    }, 50);
     try {
       const stakeBig = parseAmount(stake);
       const betNum = bumpBetCount();
-      const out = await placeDiceBet(session.ledger, {
-        betId: `dice-${betNum}`,
-        userAccountId: session.user,
-        escrowAccountId: session.escrow,
-        houseAccountId: session.house,
-        stake: stakeBig,
-        target,
-        mode,
-        currency: 'INTERNAL_USDT',
-        serverSeed: session.serverSeed,
-        clientSeed: session.clientSeed,
-        nonce: session.diceNonce,
-      });
+      const [out] = await Promise.all([
+        placeDiceBet(session.ledger, {
+          betId: `dice-${betNum}`,
+          userAccountId: session.user,
+          escrowAccountId: session.escrow,
+          houseAccountId: session.house,
+          stake: stakeBig,
+          target,
+          mode,
+          currency: 'INTERNAL_USDT',
+          serverSeed: session.serverSeed,
+          clientSeed: session.clientSeed,
+          nonce: session.diceNonce,
+        }),
+        new Promise((resolve) => setTimeout(resolve, ROLL_DURATION_MS)),
+      ]);
       bumpNonce('dice');
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setRolling(false);
+      setRollDisplay(out.roll);
       setLastResult(out);
       await refresh();
     } catch (err) {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setRolling(false);
       setError((err as Error).message);
     } finally {
       setBusy(false);
@@ -164,8 +195,10 @@ export function DiceGame() {
       </div>
 
       <div className="rounded-lg border border-solstice-border bg-solstice-bg/40 p-6">
-        <div className="mb-2 text-xs uppercase tracking-widest text-solstice-muted">Last roll</div>
-        {lastResult === null ? (
+        <div className="mb-2 text-xs uppercase tracking-widest text-solstice-muted">
+          {rolling ? 'Rolling...' : 'Last roll'}
+        </div>
+        {lastResult === null && !rolling ? (
           <p className="text-sm text-solstice-muted">
             No bets yet. Set your stake, target, mode, and roll.
           </p>
@@ -173,50 +206,58 @@ export function DiceGame() {
           <div className="space-y-3">
             <div className="text-center">
               <div
-                className={`font-mono text-6xl font-bold tabular-nums ${
-                  lastResult.isWin ? 'text-solstice-win' : 'text-solstice-loss'
+                className={`font-mono text-6xl font-bold tabular-nums transition-colors ${
+                  rolling
+                    ? 'text-solstice-accent'
+                    : lastResult?.isWin === true
+                      ? 'text-solstice-win'
+                      : 'text-solstice-loss'
                 }`}
               >
-                {lastResult.roll.toFixed(2)}
+                {rollDisplay.toFixed(2)}
               </div>
-              <div className="mt-1 text-xs text-solstice-muted">
-                vs target {lastResult.target.toFixed(2)} ({lastResult.mode})
-              </div>
+              {lastResult !== null && !rolling && (
+                <div className="mt-1 text-xs text-solstice-muted">
+                  vs target {lastResult.target.toFixed(2)} ({lastResult.mode})
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="text-solstice-muted">Multiplier: </span>
-                <span className="font-mono text-solstice-fg">
-                  {lastResult.multiplier.toFixed(4)}×
-                </span>
+            {lastResult !== null && !rolling && (
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-solstice-muted">Multiplier: </span>
+                  <span className="font-mono text-solstice-fg">
+                    {lastResult.multiplier.toFixed(4)}×
+                  </span>
+                </div>
+                <div>
+                  <span className="text-solstice-muted">Outcome: </span>
+                  <span
+                    className={`font-bold ${
+                      lastResult.isWin ? 'text-solstice-win' : 'text-solstice-loss'
+                    }`}
+                  >
+                    {lastResult.isWin ? 'WIN' : 'LOSS'}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-solstice-muted">
+                    {lastResult.isWin ? 'Payout: ' : 'Lost: '}
+                  </span>
+                  <span
+                    className={`font-mono font-bold ${
+                      lastResult.isWin ? 'text-solstice-win' : 'text-solstice-loss'
+                    }`}
+                  >
+                    {lastResult.isWin ? '+' : '-'}
+                    {formatAmountDisplay(
+                      lastResult.isWin ? lastResult.payout : lastResult.stake,
+                    )}{' '}
+                    USDT
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-solstice-muted">Outcome: </span>
-                <span
-                  className={`font-bold ${
-                    lastResult.isWin ? 'text-solstice-win' : 'text-solstice-loss'
-                  }`}
-                >
-                  {lastResult.isWin ? 'WIN' : 'LOSS'}
-                </span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-solstice-muted">
-                  {lastResult.isWin ? 'Payout: ' : 'Lost: '}
-                </span>
-                <span
-                  className={`font-mono font-bold ${
-                    lastResult.isWin ? 'text-solstice-win' : 'text-solstice-loss'
-                  }`}
-                >
-                  {lastResult.isWin ? '+' : '-'}
-                  {formatAmountDisplay(
-                    lastResult.isWin ? lastResult.payout : lastResult.stake,
-                  )}{' '}
-                  USDT
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>

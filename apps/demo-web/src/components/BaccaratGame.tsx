@@ -1,10 +1,13 @@
 // apps/demo-web/src/components/BaccaratGame.tsx
+//
+// Rainbet-style Baccarat: felt table with 3 bet circles (Player/Tie/Banker),
+// chip-based betting, animated card deals from the deck.
 
 'use client';
 
 import { useState } from 'react';
 
-import { formatAmountDisplay, parseAmount } from '@solsticebet/ledger';
+import { formatAmountDisplay } from '@solsticebet/ledger';
 import {
   PAYOUTS,
   placeBaccaratCoup,
@@ -16,82 +19,101 @@ import {
 
 import { useSession } from '@/lib/session-context';
 
-interface QueuedBet {
-  readonly id: number;
-  readonly type: BaccaratBetType;
-  readonly stake: bigint;
-}
+import { ActionButton } from './casino/ActionButton';
+import { CasinoCard } from './casino/CasinoCard';
+import { type ChipDenom, ChipSelector, BetCircle } from './casino/Chips';
+import { Deck } from './casino/Deck';
+import { Felt } from './casino/Felt';
+
+const DEAL_FROM_X = 320;
+const DEAL_STAGGER_MS = 150;
 
 const RANK_LABELS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'] as const;
-
-function cardLabel(rank: number): string {
-  return RANK_LABELS[rank] ?? '?';
+function rankLabel(r: number): string {
+  return RANK_LABELS[r] ?? '?';
 }
 
-function CardChip({ rank, highlight = false }: { rank: number; highlight?: boolean }) {
+interface CardWithPointProps {
+  readonly rank: number;
+  readonly delay: number;
+  readonly fromY: number;
+  readonly highlight?: boolean;
+  readonly animKey: string;
+}
+function CardWithPoint({ rank, delay, fromY, highlight, animKey }: CardWithPointProps) {
+  // Baccarat uses suit-less cards; render as monochrome with point indicator.
   return (
-    <div
-      className={`flex h-16 w-12 flex-col items-center justify-center rounded-md border text-xs font-bold transition ${
-        highlight
-          ? 'border-solstice-accent bg-solstice-card text-solstice-fg shadow-lg shadow-solstice-accent/30'
-          : 'border-solstice-border bg-solstice-card text-solstice-fg'
-      }`}
-    >
-      <span className="text-2xl">{cardLabel(rank)}</span>
-      <span className="text-[10px] text-solstice-muted">{pointValueOf(rank)}pt</span>
+    <div className="flex flex-col items-center">
+      <CasinoCard
+        rank={rank}
+        size="md"
+        dealFromX={DEAL_FROM_X}
+        dealFromY={fromY}
+        delay={delay}
+        animKey={animKey}
+        highlight={highlight ?? false}
+      />
+      <div className="mt-1 text-[9px] uppercase tracking-widest text-solstice-muted">
+        {rankLabel(rank)} · {pointValueOf(rank)}pt
+      </div>
     </div>
   );
 }
 
 export function BaccaratGame() {
   const { session, refresh, bumpNonce, bumpBetCount } = useSession();
-  const [stake, setStake] = useState('1');
-  const [bets, setBets] = useState<QueuedBet[]>([]);
+  // Bet amounts per bet type:
+  const [bets, setBets] = useState<{ player: bigint; banker: bigint; tie: bigint }>({
+    player: 0n,
+    banker: 0n,
+    tie: 0n,
+  });
+  const [activeCircle, setActiveCircle] = useState<BaccaratBetType>('player');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastResult, setLastResult] = useState<BaccaratCoupOutcome | null>(null);
-  const [nextBetId, setNextBetId] = useState(0);
+  const [last, setLast] = useState<BaccaratCoupOutcome | null>(null);
 
-  const totalStaked = bets.reduce((sum, b) => sum + b.stake, 0n);
+  const totalBet = bets.player + bets.banker + bets.tie;
 
-  const queueBet = (type: BaccaratBetType) => {
-    setError(null);
-    if (bets.some((b) => b.type === type)) {
-      setError(`Already have a ${type} bet queued. Remove it first.`);
-      return;
-    }
-    let stakeBig: bigint;
-    try {
-      stakeBig = parseAmount(stake);
-    } catch (err) {
-      setError(`Invalid stake: ${(err as Error).message}`);
-      return;
-    }
-    setBets((b) => [...b, { id: nextBetId, type, stake: stakeBig }]);
-    setNextBetId((n) => n + 1);
+  const addChip = (denom: ChipDenom) => {
+    setBets((prev) => ({
+      ...prev,
+      [activeCircle]: prev[activeCircle] + denom.value,
+    }));
   };
 
-  const removeBet = (id: number) => {
-    setBets((b) => b.filter((bet) => bet.id !== id));
+  const clearAll = () => {
+    setBets({ player: 0n, banker: 0n, tie: 0n });
   };
 
-  const clearBets = () => {
-    setBets([]);
-    setLastResult(null);
+  const halve = () => {
+    setBets((prev) => ({
+      player: prev.player / 2n,
+      banker: prev.banker / 2n,
+      tie: prev.tie / 2n,
+    }));
+  };
+
+  const dbl = () => {
+    setBets((prev) => ({
+      player: prev.player * 2n,
+      banker: prev.banker * 2n,
+      tie: prev.tie * 2n,
+    }));
   };
 
   const deal = async () => {
-    if (session === null || bets.length === 0) return;
+    if (session === null || totalBet === 0n) return;
     setError(null);
     setBusy(true);
     try {
-      const coupNum = bumpBetCount();
-      const apiBets: BaccaratBet[] = bets.map((b) => ({
-        type: b.type,
-        stake: b.stake,
-      }));
+      const apiBets: BaccaratBet[] = [];
+      if (bets.player > 0n) apiBets.push({ type: 'player', stake: bets.player });
+      if (bets.banker > 0n) apiBets.push({ type: 'banker', stake: bets.banker });
+      if (bets.tie > 0n) apiBets.push({ type: 'tie', stake: bets.tie });
+      const num = bumpBetCount();
       const out = await placeBaccaratCoup(session.ledger, {
-        coupId: `baccarat-${String(coupNum)}`,
+        coupId: `baccarat-${String(num)}`,
         userAccountId: session.user,
         escrowAccountId: session.escrow,
         houseAccountId: session.house,
@@ -102,8 +124,7 @@ export function BaccaratGame() {
         nonce: session.baccaratNonce,
       });
       bumpNonce('baccarat');
-      setLastResult(out);
-      setBets([]);
+      setLast(out);
       await refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -112,250 +133,194 @@ export function BaccaratGame() {
     }
   };
 
-  const winnerColor = (winner: 'player' | 'banker' | 'tie' | null): string => {
-    if (winner === 'player') return 'text-solstice-win';
-    if (winner === 'banker') return 'text-red-400';
-    if (winner === 'tie') return 'text-yellow-300';
-    return 'text-solstice-muted';
+  const reset = () => {
+    setLast(null);
+    setBets({ player: 0n, banker: 0n, tie: 0n });
+    setError(null);
   };
 
+  const winner = last?.deal.winner ?? null;
+  const playerCards = last?.deal.player.cards ?? [];
+  const bankerCards = last?.deal.banker.cards ?? [];
+
   return (
-    <div className="grid gap-6 md:grid-cols-[1fr_280px]">
-      {/* Table layout */}
-      <div className="space-y-4 rounded-lg border border-solstice-border bg-solstice-bg/40 p-6">
-        {lastResult !== null ? (
-          <div className="space-y-4">
-            <div className="text-center">
-              <div className="text-[10px] uppercase tracking-widest text-solstice-muted">
-                Winner
-              </div>
-              <div
-                className={`mt-1 text-3xl font-bold capitalize ${winnerColor(lastResult.deal.winner)}`}
-              >
-                {lastResult.deal.winner}
-                {lastResult.deal.natural && (
-                  <span className="ml-2 text-sm text-yellow-300">(natural)</span>
-                )}
-              </div>
-            </div>
-
-            {/* Two hands */}
-            <div className="grid grid-cols-2 gap-4">
-              <div
-                className={`rounded-md border p-3 ${
-                  lastResult.deal.winner === 'player'
-                    ? 'border-solstice-win bg-solstice-win/10'
-                    : 'border-solstice-border bg-solstice-card/40'
-                }`}
-              >
-                <div className="text-[10px] uppercase tracking-widest text-solstice-muted">
-                  Player
-                </div>
-                <div className="mt-1 mb-2 font-mono text-2xl font-bold">
-                  {lastResult.deal.player.total}
-                </div>
-                <div className="flex gap-1">
-                  {lastResult.deal.player.cards.map((rank, i) => (
-                    <CardChip key={i} rank={rank} highlight={lastResult.deal.winner === 'player'} />
-                  ))}
-                </div>
-              </div>
-              <div
-                className={`rounded-md border p-3 ${
-                  lastResult.deal.winner === 'banker'
-                    ? 'border-red-500 bg-red-500/10'
-                    : 'border-solstice-border bg-solstice-card/40'
-                }`}
-              >
-                <div className="text-[10px] uppercase tracking-widest text-solstice-muted">
-                  Banker
-                </div>
-                <div className="mt-1 mb-2 font-mono text-2xl font-bold">
-                  {lastResult.deal.banker.total}
-                </div>
-                <div className="flex gap-1">
-                  {lastResult.deal.banker.cards.map((rank, i) => (
-                    <CardChip key={i} rank={rank} highlight={lastResult.deal.winner === 'banker'} />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Per-bet outcomes */}
-            <div className="rounded-md border border-solstice-border bg-solstice-card/40 p-3">
-              <div className="mb-2 text-[10px] uppercase tracking-widest text-solstice-muted">
-                Per-bet outcome
-              </div>
-              <div className="space-y-1 text-xs">
-                {lastResult.bets.map((b, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-between ${
-                      b.state === 'win'
-                        ? 'text-solstice-win'
-                        : b.state === 'push'
-                          ? 'text-yellow-300'
-                          : 'text-solstice-muted'
-                    }`}
-                  >
-                    <span className="capitalize">{b.type}</span>
-                    <span className="font-mono">
-                      {formatAmountDisplay(b.stake)} →{' '}
-                      {b.state === 'win'
-                        ? `+${formatAmountDisplay(b.payout - b.stake)}`
-                        : b.state === 'push'
-                          ? 'push (refund)'
-                          : `−${formatAmountDisplay(b.stake)}`}
-                    </span>
-                  </div>
-                ))}
-                <div className="mt-1 border-t border-solstice-border pt-1 text-solstice-muted">
-                  Net:{' '}
-                  <span
-                    className={`font-mono ${
-                      lastResult.totalPayout > lastResult.totalStake
-                        ? 'text-solstice-win'
-                        : lastResult.totalPayout === lastResult.totalStake
-                          ? 'text-yellow-300'
-                          : 'text-solstice-loss'
-                    }`}
-                  >
-                    {lastResult.totalPayout > lastResult.totalStake ? '+' : ''}
-                    {formatAmountDisplay(lastResult.totalPayout - lastResult.totalStake)} USDT
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="py-12 text-center text-sm text-solstice-muted">
-            Bet on Player, Banker, or Tie. Cards deal automatically — no decisions to make.
-          </p>
-        )}
-      </div>
-
-      {/* Bet builder */}
-      <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-xs uppercase tracking-wider text-solstice-muted">
-            Stake (USDT)
-          </label>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={stake}
-            onChange={(e) => {
-              setStake(e.target.value);
-            }}
-            disabled={busy}
-            className="w-full rounded-md border border-solstice-border bg-solstice-bg px-3 py-2 font-mono text-sm text-solstice-fg focus:border-solstice-accent focus:outline-none"
-          />
+    <div className="space-y-4">
+      <Felt
+        tagline="BANKER 0.95:1 · PLAYER 1:1 · TIE 8:1"
+        {...(last !== null && winner !== null
+          ? { subTagline: `${winner.toUpperCase()} WINS` }
+          : {})}
+      >
+        {/* Deck on the right */}
+        <div className="absolute right-6 top-1/2 -translate-y-1/2">
+          <Deck size="md" />
         </div>
 
-        <div>
-          <div className="mb-1 text-[10px] uppercase tracking-widest text-solstice-muted">
-            Place bets
+        {/* Banker (top center) */}
+        <div className="absolute left-0 right-0 top-6 flex flex-col items-center">
+          <div className="text-[10px] uppercase tracking-widest text-solstice-muted">
+            Banker {last !== null && `· ${last.deal.banker.total}`}
           </div>
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => {
-                queueBet('player');
-              }}
-              disabled={busy}
-              className="flex w-full items-center justify-between rounded-md border border-blue-600/40 bg-blue-600/10 px-3 py-2 text-sm font-medium text-blue-200 hover:bg-blue-600/20"
-            >
-              <span>Player</span>
-              <span className="text-xs text-solstice-muted">{PAYOUTS.player}:1</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                queueBet('banker');
-              }}
-              disabled={busy}
-              className="flex w-full items-center justify-between rounded-md border border-red-600/40 bg-red-600/10 px-3 py-2 text-sm font-medium text-red-200 hover:bg-red-600/20"
-            >
-              <span>Banker</span>
-              <span className="text-xs text-solstice-muted">{PAYOUTS.banker}:1</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                queueBet('tie');
-              }}
-              disabled={busy}
-              className="flex w-full items-center justify-between rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm font-medium text-yellow-200 hover:bg-yellow-500/20"
-            >
-              <span>Tie</span>
-              <span className="text-xs text-solstice-muted">{PAYOUTS.tie}:1</span>
-            </button>
+          <div className="mt-1 flex gap-1">
+            {bankerCards.map((rank, i) => (
+              <CardWithPoint
+                key={`b-${String(last?.coupId ?? '')}-${String(i)}`}
+                rank={rank}
+                delay={i * DEAL_STAGGER_MS + DEAL_STAGGER_MS / 2}
+                fromY={-40}
+                highlight={winner === 'banker'}
+                animKey={`b-${String(last?.coupId ?? '')}-${String(i)}`}
+              />
+            ))}
           </div>
         </div>
 
-        {/* Bet queue */}
-        <div className="rounded-md border border-solstice-border bg-solstice-bg/50 p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-[10px] uppercase tracking-widest text-solstice-muted">
-              Queued ({bets.length}/3)
-            </div>
-            {bets.length > 0 && (
-              <button
-                type="button"
-                onClick={clearBets}
-                disabled={busy}
-                className="text-[10px] uppercase tracking-wider text-solstice-muted hover:text-solstice-loss"
-              >
-                Clear
-              </button>
-            )}
+        {/* Player (bottom center, above bet circles) */}
+        <div className="absolute bottom-32 left-0 right-0 flex flex-col items-center">
+          <div className="mt-1 flex gap-1">
+            {playerCards.map((rank, i) => (
+              <CardWithPoint
+                key={`p-${String(last?.coupId ?? '')}-${String(i)}`}
+                rank={rank}
+                delay={i * DEAL_STAGGER_MS}
+                fromY={-100}
+                highlight={winner === 'player'}
+                animKey={`p-${String(last?.coupId ?? '')}-${String(i)}`}
+              />
+            ))}
           </div>
-          {bets.length === 0 ? (
-            <p className="text-xs text-solstice-muted">No bets queued.</p>
-          ) : (
-            <ul className="space-y-1 text-xs">
-              {bets.map((b) => (
-                <li key={b.id} className="flex items-center justify-between">
-                  <span className="capitalize text-solstice-fg">{b.type}</span>
-                  <span className="flex items-center gap-2">
-                    <span className="font-mono text-solstice-fg">
-                      {formatAmountDisplay(b.stake)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        removeBet(b.id);
-                      }}
-                      disabled={busy}
-                      className="text-solstice-muted hover:text-solstice-loss"
-                    >
-                      ×
-                    </button>
-                  </span>
-                </li>
-              ))}
-              <li className="border-t border-solstice-border pt-1 text-solstice-muted">
-                Total: {formatAmountDisplay(totalStaked)} USDT
-              </li>
-            </ul>
+          {last !== null && (
+            <div className="mt-1 text-[10px] uppercase tracking-widest text-solstice-muted">
+              Player · {last.deal.player.total}
+            </div>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            void deal();
-          }}
-          disabled={busy || bets.length === 0 || session === null}
-          className="w-full rounded-md bg-gradient-to-r from-solstice-accent to-solstice-accent-deep px-4 py-3 text-sm font-bold text-solstice-bg hover:opacity-90 disabled:opacity-50"
-        >
-          {busy
-            ? 'Dealing...'
-            : bets.length === 0
-              ? 'Queue at least one bet'
-              : `Deal (${formatAmountDisplay(totalStaked)} USDT)`}
-        </button>
-        {error !== null && <p className="text-xs text-solstice-loss">{error}</p>}
+        {/* Bet circles row (very bottom of felt) */}
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-6">
+          <button
+            type="button"
+            onClick={() => {
+              if (last === null) setActiveCircle('player');
+            }}
+            disabled={last !== null}
+            className="cursor-pointer disabled:cursor-default"
+          >
+            <BetCircle
+              label="Player 1:1"
+              amount={bets.player}
+              highlight={activeCircle === 'player' && last === null}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (last === null) setActiveCircle('tie');
+            }}
+            disabled={last !== null}
+            className="cursor-pointer disabled:cursor-default"
+          >
+            <BetCircle
+              label="Tie 8:1"
+              amount={bets.tie}
+              highlight={activeCircle === 'tie' && last === null}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (last === null) setActiveCircle('banker');
+            }}
+            disabled={last !== null}
+            className="cursor-pointer disabled:cursor-default"
+          >
+            <BetCircle
+              label={`Banker ${PAYOUTS.banker}:1`}
+              amount={bets.banker}
+              highlight={activeCircle === 'banker' && last === null}
+            />
+          </button>
+        </div>
+
+        {last !== null && (
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+            <div
+              className={`rounded-md border px-3 py-1 font-mono text-sm font-bold ${
+                last.totalPayout > last.totalStake
+                  ? 'border-solstice-win bg-solstice-win/10 text-solstice-win'
+                  : last.totalPayout === last.totalStake
+                    ? 'border-yellow-500 bg-yellow-500/10 text-yellow-300'
+                    : 'border-solstice-loss bg-solstice-loss/10 text-solstice-loss'
+              }`}
+            >
+              {last.totalPayout >= last.totalStake ? '+' : ''}
+              {formatAmountDisplay(last.totalPayout - last.totalStake)} USDT
+            </div>
+          </div>
+        )}
+      </Felt>
+
+      {/* Bottom controls */}
+      <div className="rounded-lg border border-solstice-border bg-solstice-card/40 p-4">
+        {last === null ? (
+          <div className="space-y-3">
+            <div className="text-center text-[10px] uppercase tracking-widest text-solstice-muted">
+              Tap a bet circle, then click chips to add
+            </div>
+            <div className="flex items-center justify-center">
+              <ChipSelector
+                disabled={busy}
+                onPick={(d) => {
+                  addChip(d);
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={halve}
+                disabled={busy || totalBet === 0n}
+                className="rounded-md border border-solstice-border bg-solstice-bg px-3 py-1 text-xs text-solstice-muted hover:text-solstice-fg disabled:opacity-30"
+              >
+                ½
+              </button>
+              <button
+                type="button"
+                onClick={dbl}
+                disabled={busy || totalBet === 0n}
+                className="rounded-md border border-solstice-border bg-solstice-bg px-3 py-1 text-xs text-solstice-muted hover:text-solstice-fg disabled:opacity-30"
+              >
+                2×
+              </button>
+              <div className="flex-1 rounded-md border border-solstice-border bg-solstice-bg px-3 py-2 text-center font-mono text-sm text-solstice-fg">
+                Total: {formatAmountDisplay(totalBet)} USDT
+              </div>
+              <button
+                type="button"
+                onClick={clearAll}
+                disabled={busy || totalBet === 0n}
+                className="rounded-md border border-solstice-border bg-solstice-bg px-3 py-1 text-xs text-solstice-muted hover:text-solstice-loss disabled:opacity-30"
+              >
+                Clear
+              </button>
+            </div>
+            <ActionButton
+              label={busy ? 'Dealing...' : 'Deal'}
+              variant="primary"
+              {...(totalBet > 0n && !busy && session !== null
+                ? {
+                    onClick: () => {
+                      void deal();
+                    },
+                  }
+                : {})}
+              disabled={busy || totalBet === 0n || session === null}
+            />
+          </div>
+        ) : (
+          <ActionButton label="New hand" variant="primary" onClick={reset} />
+        )}
+        {error !== null && <p className="mt-2 text-center text-xs text-solstice-loss">{error}</p>}
       </div>
     </div>
   );

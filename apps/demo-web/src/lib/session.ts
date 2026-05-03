@@ -12,11 +12,15 @@ import {
 import { generateDefaultClientSeed, generateServerSeed, hashServerSeed } from '@solsticebet/rng';
 import { InMemoryMinesRoundRepository } from '@solsticebet/game-mines';
 import { InMemoryBlackjackRoundRepository } from '@solsticebet/game-blackjack';
+import { InMemoryUthCoupRepository } from '@solsticebet/game-uth';
+import { InMemoryHiLoRoundRepository } from '@solsticebet/game-hi-lo';
 
 export interface DemoSession {
   ledger: LedgerRepository;
   minesRounds: InMemoryMinesRoundRepository;
   blackjackRounds: InMemoryBlackjackRoundRepository;
+  uthCoups: InMemoryUthCoupRepository;
+  hiLoRounds: InMemoryHiLoRoundRepository;
   user: string;
   house: string;
   escrow: string;
@@ -29,6 +33,14 @@ export interface DemoSession {
   rouletteNonce: number;
   baccaratNonce: number;
   blackjackNonce: number;
+  crashNonce: number;
+  uthNonce: number;
+  sicboNonce: number;
+  coinFlipNonce: number;
+  limboNonce: number;
+  luckyWheelNonce: number;
+  kenoNonce: number;
+  hiLoNonce: number;
   betCount: number;
 }
 
@@ -42,6 +54,8 @@ export async function bootstrapSession(): Promise<DemoSession> {
   const ledger = new InMemoryLedgerRepository();
   const minesRounds = new InMemoryMinesRoundRepository();
   const blackjackRounds = new InMemoryBlackjackRoundRepository();
+  const uthCoups = new InMemoryUthCoupRepository();
+  const hiLoRounds = new InMemoryHiLoRoundRepository();
 
   await ledger.createAccount({
     id: USER_ID,
@@ -79,6 +93,8 @@ export async function bootstrapSession(): Promise<DemoSession> {
     ledger,
     minesRounds,
     blackjackRounds,
+    uthCoups,
+    hiLoRounds,
     user: USER_ID,
     house: HOUSE_ID,
     escrow: ESCROW_ID,
@@ -91,6 +107,14 @@ export async function bootstrapSession(): Promise<DemoSession> {
     rouletteNonce: 0,
     baccaratNonce: 0,
     blackjackNonce: 0,
+    crashNonce: 0,
+    uthNonce: 0,
+    sicboNonce: 0,
+    coinFlipNonce: 0,
+    limboNonce: 0,
+    luckyWheelNonce: 0,
+    kenoNonce: 0,
+    hiLoNonce: 0,
     betCount: 0,
   };
 }

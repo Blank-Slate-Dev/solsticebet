@@ -5,6 +5,14 @@ import { describe, expect, it } from 'vitest';
 import {
   deriveBaccarat,
   deriveBlackjack,
+  deriveCrash,
+  deriveUth,
+  deriveSicBo,
+  deriveKeno,
+  deriveWheel,
+  deriveHiLoCard,
+  deriveLimbo,
+  deriveCoinFlip,
   deriveDice,
   deriveMines,
   derivePlinko,
@@ -278,5 +286,231 @@ describe('deriveBlackjack', () => {
       seen.add(cards.join(','));
     }
     expect(seen.size).toBe(50);
+  });
+});
+
+describe('deriveCrash', () => {
+  it('always returns bustAt >= 1.0', () => {
+    for (let n = 0; n < 1000; n++) {
+      const { bustAt } = deriveCrash('0'.repeat(64), 'crash-test', n);
+      expect(bustAt).toBeGreaterThanOrEqual(1.0);
+    }
+  });
+
+  it('is deterministic', () => {
+    const a = deriveCrash('0'.repeat(64), 'crash-det', 42);
+    const b = deriveCrash('0'.repeat(64), 'crash-det', 42);
+    expect(a).toEqual(b);
+  });
+
+  it('different nonces produce different bust points (high probability)', () => {
+    const seen = new Set<number>();
+    for (let n = 0; n < 100; n++) {
+      seen.add(deriveCrash('0'.repeat(64), 'crash-spread', n).bustAt);
+    }
+    // Many distinct bust points expected; some 1.00x outcomes will collide,
+    // but >50 unique values is overwhelmingly likely.
+    expect(seen.size).toBeGreaterThan(50);
+  });
+
+  it('approximately 3% of rounds bust at exactly 1.00x', () => {
+    let oneCount = 0;
+    const N = 5000;
+    for (let n = 0; n < N; n++) {
+      const { bustAt } = deriveCrash('0'.repeat(64), 'crash-1x', n);
+      if (bustAt === 1.0) oneCount += 1;
+    }
+    const rate = oneCount / N;
+    // Expected ~1/33 = 3.03%; allow 2-5% for sample size.
+    expect(rate).toBeGreaterThan(0.02);
+    expect(rate).toBeLessThan(0.05);
+  });
+
+  it('long-run RTP for an always-cash-out-at-2x strategy is ~97%', () => {
+    // Cash out at 2x: win if bust >= 2x, payout is 2x stake.
+    // Theoretical: P(bust >= 2x) * 2 ≈ 0.97 / 2 * 2 = ~97% (roughly)
+    let totalReturn = 0;
+    const N = 5000;
+    for (let n = 0; n < N; n++) {
+      const { bustAt } = deriveCrash('0'.repeat(64), 'crash-rtp', n);
+      if (bustAt >= 2.0) totalReturn += 2;
+    }
+    const rtp = totalReturn / N;
+    expect(rtp).toBeGreaterThan(0.85);
+    expect(rtp).toBeLessThan(1.05);
+  });
+});
+
+describe('deriveUth', () => {
+  it('returns 9 cards each with rank 0..12 and suit 0..3', () => {
+    const { cards } = deriveUth('0'.repeat(64), 'uth-test', 0);
+    expect(cards).toHaveLength(9);
+    for (const card of cards) {
+      expect(Number.isInteger(card.rank)).toBe(true);
+      expect(card.rank).toBeGreaterThanOrEqual(0);
+      expect(card.rank).toBeLessThan(13);
+      expect(Number.isInteger(card.suit)).toBe(true);
+      expect(card.suit).toBeGreaterThanOrEqual(0);
+      expect(card.suit).toBeLessThan(4);
+    }
+  });
+
+  it('is deterministic', () => {
+    const a = deriveUth('0'.repeat(64), 'uth-det', 42);
+    const b = deriveUth('0'.repeat(64), 'uth-det', 42);
+    expect(a).toEqual(b);
+  });
+
+  it('different nonces produce different deals', () => {
+    const seen = new Set<string>();
+    for (let n = 0; n < 50; n++) {
+      const { cards } = deriveUth('0'.repeat(64), 'uth-spread', n);
+      seen.add(cards.map((c) => `${String(c.rank)}-${String(c.suit)}`).join(','));
+    }
+    expect(seen.size).toBe(50);
+  });
+});
+
+describe('deriveSicBo', () => {
+  it('returns 3 dice each in [1, 6]', () => {
+    for (let n = 0; n < 1000; n++) {
+      const { dice } = deriveSicBo('0'.repeat(64), 'sicbo-test', n);
+      expect(dice).toHaveLength(3);
+      for (const d of dice) {
+        expect(Number.isInteger(d)).toBe(true);
+        expect(d).toBeGreaterThanOrEqual(1);
+        expect(d).toBeLessThanOrEqual(6);
+      }
+    }
+  });
+
+  it('is deterministic', () => {
+    const a = deriveSicBo('0'.repeat(64), 'sicbo-det', 42);
+    const b = deriveSicBo('0'.repeat(64), 'sicbo-det', 42);
+    expect(a).toEqual(b);
+  });
+
+  it('different nonces produce different rolls (high probability)', () => {
+    const seen = new Set<string>();
+    for (let n = 0; n < 100; n++) {
+      const { dice } = deriveSicBo('0'.repeat(64), 'sicbo-spread', n);
+      seen.add(dice.join(','));
+    }
+    // 100 samples from 216 possible outcomes — collisions expected, but most distinct.
+    expect(seen.size).toBeGreaterThan(70);
+  });
+
+  it('each face appears at roughly 1/6 frequency in a large sample', () => {
+    const counts = new Array<number>(7).fill(0); // index 1..6 used
+    const N = 5000;
+    for (let n = 0; n < N; n++) {
+      const { dice } = deriveSicBo('0'.repeat(64), 'sicbo-dist', n);
+      for (const d of dice) {
+        counts[d] = (counts[d] ?? 0) + 1;
+      }
+    }
+    const expected = (N * 3) / 6;
+    for (let face = 1; face <= 6; face++) {
+      const c = counts[face] ?? 0;
+      expect(c).toBeGreaterThan(expected * 0.85);
+      expect(c).toBeLessThan(expected * 1.15);
+    }
+  });
+});
+
+describe('deriveKeno', () => {
+  it('returns 20 unique numbers from [1, 80]', () => {
+    const { drawn } = deriveKeno('0'.repeat(64), 'k', 0);
+    expect(drawn).toHaveLength(20);
+    const set = new Set(drawn);
+    expect(set.size).toBe(20);
+    for (const n of drawn) {
+      expect(n).toBeGreaterThanOrEqual(1);
+      expect(n).toBeLessThanOrEqual(80);
+    }
+  });
+  it('is deterministic', () => {
+    const a = deriveKeno('0'.repeat(64), 'k', 42);
+    const b = deriveKeno('0'.repeat(64), 'k', 42);
+    expect(a).toEqual(b);
+  });
+  it('returns sorted ascending', () => {
+    const { drawn } = deriveKeno('0'.repeat(64), 'k', 1);
+    for (let i = 1; i < drawn.length; i++) {
+      expect((drawn[i] ?? 0) > (drawn[i - 1] ?? 0)).toBe(true);
+    }
+  });
+});
+
+describe('deriveWheel', () => {
+  it('returns a value in [0, 1)', () => {
+    for (let n = 0; n < 100; n++) {
+      const { value } = deriveWheel('0'.repeat(64), 'w', n);
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThan(1);
+    }
+  });
+  it('is deterministic', () => {
+    expect(deriveWheel('0'.repeat(64), 'w', 7)).toEqual(deriveWheel('0'.repeat(64), 'w', 7));
+  });
+});
+
+describe('deriveHiLoCard', () => {
+  it('returns rank in [0, 13)', () => {
+    for (let i = 0; i < 100; i++) {
+      const { rank } = deriveHiLoCard('0'.repeat(64), 'h', 0, i);
+      expect(rank).toBeGreaterThanOrEqual(0);
+      expect(rank).toBeLessThan(13);
+    }
+  });
+  it('different drawIndex yields different cards (high probability)', () => {
+    const seen = new Set<number>();
+    for (let i = 0; i < 50; i++) {
+      seen.add(deriveHiLoCard('0'.repeat(64), 'h', 0, i).rank);
+    }
+    expect(seen.size).toBeGreaterThan(8);
+  });
+  it('rejects invalid drawIndex', () => {
+    expect(() => deriveHiLoCard('0'.repeat(64), 'h', 0, -1)).toThrow();
+    expect(() => deriveHiLoCard('0'.repeat(64), 'h', 0, 1.5)).toThrow();
+  });
+});
+
+describe('deriveLimbo', () => {
+  it('always returns result >= 1.0', () => {
+    for (let n = 0; n < 1000; n++) {
+      const { result } = deriveLimbo('0'.repeat(64), 'l', n);
+      expect(result).toBeGreaterThanOrEqual(1.0);
+    }
+  });
+  it('approximately 1% bust at 1.00x (1% house edge)', () => {
+    let oneCount = 0;
+    const N = 5000;
+    for (let n = 0; n < N; n++) {
+      const { result } = deriveLimbo('0'.repeat(64), 'l1', n);
+      if (result === 1.0) oneCount += 1;
+    }
+    const rate = oneCount / N;
+    expect(rate).toBeGreaterThan(0.005);
+    expect(rate).toBeLessThan(0.02);
+  });
+});
+
+describe('deriveCoinFlip', () => {
+  it("returns 'heads' or 'tails'", () => {
+    for (let n = 0; n < 100; n++) {
+      const { side } = deriveCoinFlip('0'.repeat(64), 'c', n);
+      expect(['heads', 'tails']).toContain(side);
+    }
+  });
+  it('roughly 50/50 over a large sample', () => {
+    let heads = 0;
+    const N = 5000;
+    for (let n = 0; n < N; n++) {
+      if (deriveCoinFlip('0'.repeat(64), 'c-dist', n).side === 'heads') heads += 1;
+    }
+    const rate = heads / N;
+    expect(rate).toBeGreaterThan(0.46);
+    expect(rate).toBeLessThan(0.54);
   });
 });

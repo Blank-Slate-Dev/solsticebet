@@ -27,7 +27,10 @@ export function SeedPanel() {
           <dd className="text-solstice-fg">
             dice {session.diceNonce} · mines {session.minesNonce} · plinko {session.plinkoNonce} ·
             roulette {session.rouletteNonce} · baccarat {session.baccaratNonce} · blackjack{' '}
-            {session.blackjackNonce}
+            {session.blackjackNonce} · crash {session.crashNonce} · uth {session.uthNonce} · sicbo{' '}
+            {session.sicboNonce} · coin-flip {session.coinFlipNonce} · limbo {session.limboNonce} ·
+            lucky-wheel {session.luckyWheelNonce} · keno {session.kenoNonce} · hi-lo{' '}
+            {session.hiLoNonce}
           </dd>
         </div>
       </dl>

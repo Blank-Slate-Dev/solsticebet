@@ -15,7 +15,23 @@ interface SessionState {
   /** Refresh balance + recent entries from the ledger. */
   refresh: () => Promise<void>;
   /** Increment a nonce (after placing a bet of that game type). */
-  bumpNonce: (game: 'dice' | 'mines' | 'plinko' | 'roulette' | 'baccarat' | 'blackjack') => void;
+  bumpNonce: (
+    game:
+      | 'dice'
+      | 'mines'
+      | 'plinko'
+      | 'roulette'
+      | 'baccarat'
+      | 'blackjack'
+      | 'crash'
+      | 'uth'
+      | 'sicbo'
+      | 'coin-flip'
+      | 'limbo'
+      | 'lucky-wheel'
+      | 'keno'
+      | 'hi-lo',
+  ) => void;
   /** Increment the bet counter (used to mint unique bet IDs). */
   bumpBetCount: () => number;
   /** Reset the session to a fresh state. */
@@ -54,14 +70,38 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [reset]);
 
   const bumpNonce = useCallback(
-    (game: 'dice' | 'mines' | 'plinko' | 'roulette' | 'baccarat' | 'blackjack') => {
+    (
+      game:
+        | 'dice'
+        | 'mines'
+        | 'plinko'
+        | 'roulette'
+        | 'baccarat'
+        | 'blackjack'
+        | 'crash'
+        | 'uth'
+        | 'sicbo'
+        | 'coin-flip'
+        | 'limbo'
+        | 'lucky-wheel'
+        | 'keno'
+        | 'hi-lo',
+    ) => {
       if (session === null) return;
       if (game === 'dice') session.diceNonce += 1;
       else if (game === 'mines') session.minesNonce += 1;
       else if (game === 'plinko') session.plinkoNonce += 1;
       else if (game === 'roulette') session.rouletteNonce += 1;
       else if (game === 'baccarat') session.baccaratNonce += 1;
-      else session.blackjackNonce += 1;
+      else if (game === 'blackjack') session.blackjackNonce += 1;
+      else if (game === 'crash') session.crashNonce += 1;
+      else if (game === 'uth') session.uthNonce += 1;
+      else if (game === 'sicbo') session.sicboNonce += 1;
+      else if (game === 'coin-flip') session.coinFlipNonce += 1;
+      else if (game === 'limbo') session.limboNonce += 1;
+      else if (game === 'lucky-wheel') session.luckyWheelNonce += 1;
+      else if (game === 'keno') session.kenoNonce += 1;
+      else session.hiLoNonce += 1;
     },
     [session],
   );

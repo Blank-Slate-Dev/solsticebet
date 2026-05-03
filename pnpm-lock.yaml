@@ -77,9 +77,27 @@ importers:
       '@solsticebet/game-blackjack':
         specifier: workspace:*
         version: link:../../packages/games/blackjack
+      '@solsticebet/game-coin-flip':
+        specifier: workspace:*
+        version: link:../../packages/games/coin-flip
+      '@solsticebet/game-crash':
+        specifier: workspace:*
+        version: link:../../packages/games/crash
       '@solsticebet/game-dice':
         specifier: workspace:*
         version: link:../../packages/games/dice
+      '@solsticebet/game-hi-lo':
+        specifier: workspace:*
+        version: link:../../packages/games/hi-lo
+      '@solsticebet/game-keno':
+        specifier: workspace:*
+        version: link:../../packages/games/keno
+      '@solsticebet/game-limbo':
+        specifier: workspace:*
+        version: link:../../packages/games/limbo
+      '@solsticebet/game-lucky-wheel':
+        specifier: workspace:*
+        version: link:../../packages/games/lucky-wheel
       '@solsticebet/game-mines':
         specifier: workspace:*
         version: link:../../packages/games/mines
@@ -89,6 +107,12 @@ importers:
       '@solsticebet/game-roulette':
         specifier: workspace:*
         version: link:../../packages/games/roulette
+      '@solsticebet/game-sicbo':
+        specifier: workspace:*
+        version: link:../../packages/games/sicbo
+      '@solsticebet/game-uth':
+        specifier: workspace:*
+        version: link:../../packages/games/uth
       '@solsticebet/ledger':
         specifier: workspace:*
         version: link:../../packages/ledger
@@ -229,8 +253,43 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.17)
 
-  packages/games/crash:
+  packages/games/coin-flip:
+    dependencies:
+      '@solsticebet/ledger':
+        specifier: workspace:*
+        version: link:../../ledger
+      '@solsticebet/rng':
+        specifier: workspace:*
+        version: link:../../rng
     devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@types/node@22.19.17))
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.17)
+
+  packages/games/crash:
+    dependencies:
+      '@solsticebet/ledger':
+        specifier: workspace:*
+        version: link:../../ledger
+      '@solsticebet/rng':
+        specifier: workspace:*
+        version: link:../../rng
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@types/node@22.19.17))
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -239,6 +298,94 @@ importers:
         version: 2.1.9(@types/node@22.19.17)
 
   packages/games/dice:
+    dependencies:
+      '@solsticebet/ledger':
+        specifier: workspace:*
+        version: link:../../ledger
+      '@solsticebet/rng':
+        specifier: workspace:*
+        version: link:../../rng
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@types/node@22.19.17))
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.17)
+
+  packages/games/hi-lo:
+    dependencies:
+      '@solsticebet/ledger':
+        specifier: workspace:*
+        version: link:../../ledger
+      '@solsticebet/rng':
+        specifier: workspace:*
+        version: link:../../rng
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@types/node@22.19.17))
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.17)
+
+  packages/games/keno:
+    dependencies:
+      '@solsticebet/ledger':
+        specifier: workspace:*
+        version: link:../../ledger
+      '@solsticebet/rng':
+        specifier: workspace:*
+        version: link:../../rng
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@types/node@22.19.17))
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.17)
+
+  packages/games/limbo:
+    dependencies:
+      '@solsticebet/ledger':
+        specifier: workspace:*
+        version: link:../../ledger
+      '@solsticebet/rng':
+        specifier: workspace:*
+        version: link:../../rng
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@types/node@22.19.17))
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.17)
+
+  packages/games/lucky-wheel:
     dependencies:
       '@solsticebet/ledger':
         specifier: workspace:*
@@ -305,6 +452,50 @@ importers:
         version: 2.1.9(@types/node@22.19.17)
 
   packages/games/roulette:
+    dependencies:
+      '@solsticebet/ledger':
+        specifier: workspace:*
+        version: link:../../ledger
+      '@solsticebet/rng':
+        specifier: workspace:*
+        version: link:../../rng
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@types/node@22.19.17))
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.17)
+
+  packages/games/sicbo:
+    dependencies:
+      '@solsticebet/ledger':
+        specifier: workspace:*
+        version: link:../../ledger
+      '@solsticebet/rng':
+        specifier: workspace:*
+        version: link:../../rng
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.17
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.9(vitest@2.1.9(@types/node@22.19.17))
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.17)
+
+  packages/games/uth:
     dependencies:
       '@solsticebet/ledger':
         specifier: workspace:*
