@@ -1,0 +1,15 @@
+{
+  "name": "@solsticebet/game-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fastify + WebSocket game server",
+  "scripts": {
+    "build": "echo 'Fastify scaffold pending — lands with first game' && exit 0",
+    "dev": "echo 'Fastify scaffold pending — lands with first game'",
+    "lint": "echo 'pending'",
+    "typecheck": "echo 'pending'",
+    "test": "echo 'pending'",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  }
+}

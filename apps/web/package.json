@@ -1,0 +1,15 @@
+{
+  "name": "@solsticebet/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Player-facing web app — solsticebet.com",
+  "scripts": {
+    "build": "echo 'Next.js scaffold pending — see docs/ARCHITECTURE.md § 5.1' && exit 0",
+    "dev": "echo 'Next.js scaffold pending — see docs/ARCHITECTURE.md § 5.1'",
+    "lint": "echo 'pending'",
+    "typecheck": "echo 'pending'",
+    "test": "echo 'pending'",
+    "clean": "rm -rf dist .next .turbo *.tsbuildinfo"
+  }
+}

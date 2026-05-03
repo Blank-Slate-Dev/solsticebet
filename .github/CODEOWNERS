@@ -1,0 +1,30 @@
+# Solstice CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositories-settings-and-security/customizing-your-repository/about-code-owners
+#
+# Order matters — the LAST matching pattern takes precedence.
+# Branch protection rules must require code owner review for these paths.
+
+# Default: any change requires review by the engineering team
+* @oakley
+
+# RESTRICTED PACKAGES — Oakley-only review.
+# These touch money, fairness, and compliance.
+# Do not loosen this without a written architectural decision.
+
+/packages/rng/                @oakley
+/packages/ledger/             @oakley
+/packages/wallet/             @oakley
+/packages/compliance/         @oakley
+/packages/db/migrations/      @oakley
+
+# Infrastructure changes — Oakley-only.
+/infra/                       @oakley
+/.github/                     @oakley
+
+# Architectural decisions — Oakley-only.
+/docs/ARCHITECTURE.md         @oakley
+/docs/SCHEMA.md               @oakley
+/docs/RNG.md                  @oakley
+/docs/LEDGER.md               @oakley
+/docs/DECISIONS/              @oakley
+/CODEOWNERS                   @oakley
