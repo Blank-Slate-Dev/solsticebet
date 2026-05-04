@@ -1,8 +1,10 @@
 // apps/demo-web/src/components/casino/CasinoCard.tsx
 //
-// A casino playing card. Optionally animates from the deck position when
-// `dealFromDeck` and `cardIndex` are provided (each card staggered slightly
-// later than the previous).
+// Casino playing card. Uses the Web Animations API (element.animate()) to
+// drive the deal-from-deck animation directly from JS, bypassing any CSS
+// class / specificity / cache concerns.
+
+import { useEffect, useRef } from 'react';
 
 const RANK_LABELS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'] as const;
 const SUIT_GLYPHS = ['♠', '♥', '♦', '♣'] as const;
@@ -18,19 +20,14 @@ export function isRedSuit(suit: number): boolean {
 }
 
 interface CasinoCardProps {
-  /** Card rank 0..12. */
   readonly rank: number | null;
-  /** Optional suit 0..3. Omit for suitless games (Baccarat/Blackjack/Hi-Lo). */
   readonly suit?: number;
   readonly faceDown?: boolean;
   readonly highlight?: boolean;
   readonly size?: 'sm' | 'md' | 'lg';
-  /** If set, card animates from this offset (deck position). */
   readonly dealFromX?: number;
   readonly dealFromY?: number;
-  /** Stagger delay in ms. */
   readonly delay?: number;
-  /** Animation key — when changes, replays the deal. */
   readonly animKey?: string | number;
 }
 
@@ -49,63 +46,105 @@ export function CasinoCard({
   const rankSize = size === 'lg' ? 'text-base' : size === 'sm' ? 'text-xs' : 'text-sm';
   const suitSize = size === 'lg' ? 'text-3xl' : size === 'sm' ? 'text-base' : 'text-2xl';
 
-  const animStyle: Record<string, string | number> = {};
-  if (dealFromX !== undefined) {
-    animStyle['--deal-from-x'] = `${String(dealFromX)}px`;
-  }
-  if (dealFromY !== undefined) {
-    animStyle['--deal-from-y'] = `${String(dealFromY)}px`;
-  }
-  if (delay !== undefined) animStyle.animationDelay = `${String(delay)}ms`;
-  // When dealing from deck: start invisible so the pre-animation state isn't
-  // visible at the destination during the delay window.
-  if (delay !== undefined && delay > 0) {
-    animStyle.opacity = 0;
-  }
+  // Imperative animation via Web Animations API. Triggers when the element
+  // mounts AND when animKey changes.
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (dealFromX === undefined) return;
+    const el = ref.current;
+    if (el === null) return;
+    // Use Web Animations API — runs the animation directly on the element,
+    // bypassing CSS class / specificity / cache concerns.
+    const animation = el.animate(
+      [
+        {
+          transform: `translate(${String(dealFromX)}px, ${String(dealFromY ?? 0)}px) rotate(15deg) scale(0.85)`,
+          opacity: 0,
+        },
+        {
+          transform: `translate(${String(dealFromX)}px, ${String(dealFromY ?? 0)}px) rotate(15deg) scale(0.85)`,
+          opacity: 1,
+          offset: 0.2,
+        },
+        {
+          transform: 'translate(0, 0) rotate(0deg) scale(1)',
+          opacity: 1,
+        },
+      ],
+      {
+        duration: 700,
+        delay: delay ?? 0,
+        easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+        fill: 'both',
+      },
+    );
+    return () => {
+      animation.cancel();
+    };
+    // animKey is intentionally a dependency to replay the animation on key change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animKey]);
 
-  const animClass = dealFromX !== undefined ? 'card-deal-from-deck' : 'card-flip-in';
-
-  if (faceDown || rank === null) {
+  if (faceDown) {
     return (
-      <div className="perspective-[1000px]">
-        <div
-          key={animKey}
-          style={animStyle as React.CSSProperties}
-          className={`${animClass} flex ${dims} items-center justify-center rounded-md border border-solstice-border bg-gradient-to-br from-solstice-accent-deep to-solstice-bg shadow-md`}
-        >
-          <div className="h-2/3 w-2/3 rounded border border-solstice-accent/40 bg-solstice-accent/10" />
+      <div
+        className={`${dims} relative flex items-center justify-center rounded-md border border-solstice-accent/60 bg-gradient-to-br from-solstice-accent-deep via-[#0e1a3b] to-solstice-bg shadow-md`}
+      >
+        <div className="absolute inset-1.5 rounded border border-solstice-accent/40">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="relative h-6 w-6">
+              <div className="absolute inset-0 rounded-full border-2 border-solstice-accent/70" />
+              <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-solstice-accent/40" />
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
+  if (rank === null) {
+    return null;
+  }
+
   const red = suit !== undefined && isRedSuit(suit);
+
+  // The card front content
+  const front = (
+    <div
+      className={`flex h-full w-full flex-col items-center ${
+        size === 'sm' ? 'justify-center' : 'justify-between'
+      } rounded-md border bg-white p-1 text-black shadow-lg ${
+        highlight ? 'border-solstice-accent ring-2 ring-solstice-accent/50' : 'border-zinc-300'
+      }`}
+    >
+      <div className={`${rankSize} font-bold ${red ? 'text-red-600' : 'text-zinc-900'}`}>
+        {rankLabel(rank)}
+      </div>
+      {size !== 'sm' && (
+        <>
+          <div className={`${suitSize} ${red ? 'text-red-600' : 'text-zinc-900'}`}>
+            {suit !== undefined ? suitGlyph(suit) : ''}
+          </div>
+          <div
+            className={`rotate-180 ${rankSize} font-bold ${red ? 'text-red-600' : 'text-zinc-900'}`}
+          >
+            {rankLabel(rank)}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // No animation: cards already on the table.
+  if (dealFromX === undefined) {
+    return <div className={`${dims} relative`}>{front}</div>;
+  }
+
+  // Animated: imperative Web Animations API runs in the effect above.
   return (
-    <div className="perspective-[1000px]">
-      <div
-        key={animKey}
-        style={animStyle as React.CSSProperties}
-        className={`${animClass} flex ${dims} flex-col items-center ${
-          size === 'sm' ? 'justify-center' : 'justify-between'
-        } rounded-md border bg-white p-1 text-black shadow-lg ${
-          highlight ? 'border-solstice-accent ring-2 ring-solstice-accent/50' : 'border-zinc-300'
-        }`}
-      >
-        <div className={`${rankSize} font-bold ${red ? 'text-red-600' : 'text-zinc-900'}`}>
-          {rankLabel(rank)}
-        </div>
-        {size !== 'sm' && (
-          <>
-            <div className={`${suitSize} ${red ? 'text-red-600' : 'text-zinc-900'}`}>
-              {suit !== undefined ? suitGlyph(suit) : ''}
-            </div>
-            <div
-              className={`rotate-180 ${rankSize} font-bold ${red ? 'text-red-600' : 'text-zinc-900'}`}
-            >
-              {rankLabel(rank)}
-            </div>
-          </>
-        )}
+    <div className={`${dims} relative`}>
+      <div ref={ref} className="h-full w-full">
+        {front}
       </div>
     </div>
   );

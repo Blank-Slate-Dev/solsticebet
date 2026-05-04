@@ -201,16 +201,17 @@ body {
 
 /* Card slides from the deck position to its target with rotation.
    The deck is on the right side; the card is dealt to the left/center.
-   Each card sets --deal-from-x and --deal-from-y in pixels offset from
-   final position. */
+   --deal-from-x and --deal-from-y are pixel offsets from final position
+   (positive x = card starts to the right of where it ends). */
 @keyframes card-deal-from-deck {
   0% {
     transform:
       translate(var(--deal-from-x, 400px), var(--deal-from-y, -50px))
-      rotate(15deg) scale(0.9);
+      rotate(15deg)
+      scale(0.85);
     opacity: 0;
   }
-  60% {
+  20% {
     opacity: 1;
   }
   100% {
@@ -219,7 +220,7 @@ body {
   }
 }
 .card-deal-from-deck {
-  animation: card-deal-from-deck 480ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: card-deal-from-deck 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /* Chip place: chip drops in with a small bounce */
@@ -239,4 +240,51 @@ body {
 }
 .chip-place {
   animation: chip-place 280ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ─── Slide-and-flip card deal ───────────────────────────────────────── */
+/* Card travels from deck to destination AND flips face-up mid-travel.
+   --deal-from-x and --deal-from-y are pixel offsets from the destination. */
+@keyframes card-deal-and-flip {
+  0% {
+    transform:
+      translate(var(--deal-from-x, 320px), var(--deal-from-y, -100px))
+      rotate(8deg)
+      rotateY(180deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  /* By 60% the card has reached its destination and started flipping */
+  60% {
+    transform:
+      translate(0, 0)
+      rotate(0deg)
+      rotateY(180deg);
+    opacity: 1;
+  }
+  /* At 100% the card is fully face-up at rest */
+  100% {
+    transform:
+      translate(0, 0)
+      rotate(0deg)
+      rotateY(0deg);
+    opacity: 1;
+  }
+}
+.card-deal-and-flip {
+  animation: card-deal-and-flip 700ms cubic-bezier(0.25, 0.8, 0.3, 1) forwards;
+  transform-style: preserve-3d;
+}
+
+/* The two faces of a 3D-flippable card. */
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-face-back {
+  transform: rotateY(180deg);
 }

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { formatAmountDisplay } from '@solsticebet/ledger';
 import {
@@ -25,7 +25,7 @@ import { useSession } from '@/lib/session-context';
 
 import { ActionButton } from './casino/ActionButton';
 import { CasinoCard } from './casino/CasinoCard';
-import { type ChipDenom, ChipSelector, BetCircle } from './casino/Chips';
+import { type ChipDenom, ChipSelector, BetCircle, decomposeIntoChips } from './casino/Chips';
 import { Deck } from './casino/Deck';
 import { Felt } from './casino/Felt';
 
@@ -42,9 +42,13 @@ interface HandViewProps {
   readonly isActive: boolean;
   readonly handIndex: number;
   readonly roundId: string;
+  /** Number of cards that were already on the table on the previous render.
+      Cards at indices < this are NOT animated; cards at indices ≥ this ARE
+      animated as fresh deals from the deck. */
+  readonly previouslyDealt: number;
 }
 
-function HandView({ hand, isActive, handIndex, roundId }: HandViewProps) {
+function HandView({ hand, isActive, handIndex, roundId, previouslyDealt }: HandViewProps) {
   const t = handTotal(hand.cards);
   let label = '';
   let labelColor = 'text-solstice-muted';
@@ -92,18 +96,29 @@ function HandView({ hand, isActive, handIndex, roundId }: HandViewProps) {
         )}
       </div>
       <div className="flex gap-1">
-        {hand.cards.map((rank, i) => (
-          <CasinoCard
-            key={`${roundId}-h${String(handIndex)}-c${String(i)}`}
-            rank={rank}
-            size="md"
-            highlight={isActive && i === hand.cards.length - 1}
-            dealFromX={DEAL_FROM_X}
-            dealFromY={DEAL_FROM_Y_PLAYER}
-            delay={i * DEAL_STAGGER_MS}
-            animKey={`${roundId}-h${String(handIndex)}-c${String(i)}`}
-          />
-        ))}
+        {hand.cards.map((rank, i) => {
+          const isNew = i >= previouslyDealt;
+          // For new cards, stagger their deal animations relative to the
+          // first new card (so they cascade nicely). For cards already on
+          // the table, skip the animation entirely.
+          const newCardIndex = i - previouslyDealt;
+          return (
+            <CasinoCard
+              key={`${roundId}-h${String(handIndex)}-c${String(i)}`}
+              rank={rank}
+              size="md"
+              highlight={isActive && i === hand.cards.length - 1}
+              {...(isNew
+                ? {
+                    dealFromX: DEAL_FROM_X,
+                    dealFromY: DEAL_FROM_Y_PLAYER,
+                    delay: newCardIndex * DEAL_STAGGER_MS,
+                  }
+                : {})}
+              animKey={`${roundId}-h${String(handIndex)}-c${String(i)}`}
+            />
+          );
+        })}
       </div>
       {hand.payout !== null && hand.payout > 0n && (
         <div className="font-mono text-xs text-solstice-win">
@@ -120,6 +135,40 @@ export function BlackjackGame() {
   const [round, setRound] = useState<BlackjackRound | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Track how many cards each (roundId, handIndex) had on the previous render.
+  // Used to skip the deal-from-deck animation on cards that are already on the
+  // table (otherwise they'd snap back to the deck and replay the deal on every
+  // round-state update).
+  const previouslyDealtRef = useRef<Map<string, number>>(new Map());
+  // Same tracker for dealer cards.
+  const previousDealerCountRef = useRef<number>(0);
+
+  // Derive previouslyDealt for each hand from the ref BEFORE rendering, then
+  // update the ref AFTER rendering for the next pass.
+  const handPrevCounts: number[] = [];
+  if (round !== null) {
+    for (let i = 0; i < round.playerHands.length; i++) {
+      const k = `${round.roundId}-${String(i)}`;
+      handPrevCounts.push(previouslyDealtRef.current.get(k) ?? 0);
+    }
+  }
+  const dealerPrevCount = previousDealerCountRef.current;
+
+  useEffect(() => {
+    if (round === null) {
+      previouslyDealtRef.current.clear();
+      previousDealerCountRef.current = 0;
+      return;
+    }
+    // Update the ref to current card counts so the next render knows what was
+    // already on the table.
+    for (let i = 0; i < round.playerHands.length; i++) {
+      const k = `${round.roundId}-${String(i)}`;
+      previouslyDealtRef.current.set(k, round.playerHands[i]?.cards.length ?? 0);
+    }
+    previousDealerCountRef.current = round.dealer.cards.length;
+  });
 
   const isSettled = round?.state === 'settled';
   const activeHand =
@@ -139,6 +188,19 @@ export function BlackjackGame() {
 
   const addChip = (denom: ChipDenom) => {
     setBetAmount((prev) => prev + denom.value);
+  };
+
+  const removeTopChip = () => {
+    setBetAmount((prev) => {
+      if (prev === 0n) return prev;
+      const stack = decomposeIntoChips(prev);
+      // The "top chip" is the last in the decomposition (smallest denom in
+      // the stack visually, since the stack is rendered with largest at
+      // bottom and smallest on top).
+      const top = stack[stack.length - 1];
+      if (top === undefined) return prev;
+      return prev - top.value;
+    });
   };
 
   const clearBet = () => {
@@ -259,15 +321,21 @@ export function BlackjackGame() {
             {dealerCards.map((rank, i) => {
               // Hide the second dealer card until settled.
               const isHole = i === 1 && !dealerFinal;
+              const isNew = i >= dealerPrevCount;
+              const newCardIndex = i - dealerPrevCount;
               return (
                 <CasinoCard
                   key={`dealer-${String(round?.roundId ?? 'none')}-${String(i)}`}
                   rank={rank}
                   faceDown={isHole}
                   size="md"
-                  dealFromX={DEAL_FROM_X}
-                  dealFromY={DEAL_FROM_Y_DEALER}
-                  delay={i * DEAL_STAGGER_MS + DEAL_STAGGER_MS / 2}
+                  {...(isNew
+                    ? {
+                        dealFromX: DEAL_FROM_X,
+                        dealFromY: DEAL_FROM_Y_DEALER,
+                        delay: newCardIndex * DEAL_STAGGER_MS + DEAL_STAGGER_MS / 2,
+                      }
+                    : {})}
                   animKey={`dealer-${String(round?.roundId ?? 'none')}-${String(i)}-${String(dealerFinal)}`}
                 />
               );
@@ -286,6 +354,7 @@ export function BlackjackGame() {
                   isActive={!isSettled && i === round.activeHandIndex}
                   handIndex={i}
                   roundId={round.roundId}
+                  previouslyDealt={handPrevCounts[i] ?? 0}
                 />
               ))}
             </div>
@@ -298,7 +367,12 @@ export function BlackjackGame() {
                 tooltip="Side bet — coming soon"
                 size="sm"
               />
-              <BetCircle label="Main bet" amount={betAmount} highlight={betAmount > 0n} />
+              <BetCircle
+                label="Main bet"
+                amount={betAmount}
+                highlight={betAmount > 0n}
+                onRemoveChip={removeTopChip}
+              />
               <BetCircle
                 label="21+3"
                 amount={0n}

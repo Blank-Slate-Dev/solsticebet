@@ -21,12 +21,28 @@ import { useSession } from '@/lib/session-context';
 
 import { ActionButton } from './casino/ActionButton';
 import { CasinoCard } from './casino/CasinoCard';
-import { type ChipDenom, ChipSelector, BetCircle } from './casino/Chips';
+import { type ChipDenom, ChipSelector, BetCircle, decomposeIntoChips } from './casino/Chips';
 import { Deck } from './casino/Deck';
 import { Felt } from './casino/Felt';
 
 const DEAL_FROM_X = 320;
 const DEAL_STAGGER_MS = 150;
+
+/**
+ * Removes the smallest chip from a bet circle's stack. Returns a new bets
+ * object. If the circle has no chips, the bet object is returned unchanged.
+ */
+function removeTopChipFrom(
+  bets: { player: bigint; banker: bigint; tie: bigint },
+  circle: 'player' | 'banker' | 'tie',
+): { player: bigint; banker: bigint; tie: bigint } {
+  const current = bets[circle];
+  if (current === 0n) return bets;
+  const stack = decomposeIntoChips(current);
+  const top = stack[stack.length - 1];
+  if (top === undefined) return bets;
+  return { ...bets, [circle]: current - top.value };
+}
 
 const RANK_LABELS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'] as const;
 function rankLabel(r: number): string {
@@ -198,48 +214,54 @@ export function BaccaratGame() {
 
         {/* Bet circles row (very bottom of felt) */}
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-6">
-          <button
-            type="button"
-            onClick={() => {
-              if (last === null) setActiveCircle('player');
-            }}
+          <BetCircle
+            label="Player 1:1"
+            amount={bets.player}
+            highlight={activeCircle === 'player' && last === null}
             disabled={last !== null}
-            className="cursor-pointer disabled:cursor-default"
-          >
-            <BetCircle
-              label="Player 1:1"
-              amount={bets.player}
-              highlight={activeCircle === 'player' && last === null}
-            />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (last === null) setActiveCircle('tie');
-            }}
+            {...(last === null
+              ? {
+                  onClick: () => {
+                    setActiveCircle('player');
+                  },
+                  onRemoveChip: () => {
+                    setBets((prev) => removeTopChipFrom(prev, 'player'));
+                  },
+                }
+              : {})}
+          />
+          <BetCircle
+            label="Tie 8:1"
+            amount={bets.tie}
+            highlight={activeCircle === 'tie' && last === null}
             disabled={last !== null}
-            className="cursor-pointer disabled:cursor-default"
-          >
-            <BetCircle
-              label="Tie 8:1"
-              amount={bets.tie}
-              highlight={activeCircle === 'tie' && last === null}
-            />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (last === null) setActiveCircle('banker');
-            }}
+            {...(last === null
+              ? {
+                  onClick: () => {
+                    setActiveCircle('tie');
+                  },
+                  onRemoveChip: () => {
+                    setBets((prev) => removeTopChipFrom(prev, 'tie'));
+                  },
+                }
+              : {})}
+          />
+          <BetCircle
+            label={`Banker ${PAYOUTS.banker}:1`}
+            amount={bets.banker}
+            highlight={activeCircle === 'banker' && last === null}
             disabled={last !== null}
-            className="cursor-pointer disabled:cursor-default"
-          >
-            <BetCircle
-              label={`Banker ${PAYOUTS.banker}:1`}
-              amount={bets.banker}
-              highlight={activeCircle === 'banker' && last === null}
-            />
-          </button>
+            {...(last === null
+              ? {
+                  onClick: () => {
+                    setActiveCircle('banker');
+                  },
+                  onRemoveChip: () => {
+                    setBets((prev) => removeTopChipFrom(prev, 'banker'));
+                  },
+                }
+              : {})}
+          />
         </div>
 
         {last !== null && (
